@@ -12,12 +12,22 @@ import utilities
 
 """ Parameters """
 noise = 0.05
-num_signals = 2
-meanings = [0, 1]
-signals = ['a', 'b']
-context1 = [0.5, 0.9] # where are the referents
+num_signals = 3
+meanings = [0, 1, 2]
+signals = ['a', 'b', 'c']
+# num_signals = 2
+# meanings= [0, 1]
+# signals = ['a', 'b']
 perspectives = [0, 1]
-languages = [[[1, 1], [1, 1]], [[1, 1], [1, 0]], [[1, 1], [0, 1]], [[1, 0], [1, 1]], [[1, 0], [1, 0]], [[1, 0], [0, 1]], [[0, 1], [1, 1]], [[0, 1], [1, 0]], [[0, 1], [0, 1]]]
+# languages = [[[1, 1], [1, 1]], [[1, 1], [1, 0]], [[1, 1], [0, 1]], [[1, 0], [1, 1]], [[1, 0], [1, 0]], [[1, 0], [0, 1]], [[0, 1], [1, 1]], [[0, 1], [1, 0]], [[0, 1], [0, 1]]]
+languages = []
+for i in range(pow(2, 9), 0, -1):
+    string = str(format(i, 'b'))
+    if len(string) >= 7:
+        while len(string) < 9:
+            string = '0' + string
+        if string[-3:] != '000' and string[3:-3] != '000':
+            languages.append([[string[0],string[1],string[2]], [string[3],string[4],string[5]], [string[6],string[7],string[8]]])
 # generate list of language-perspective pairs
 lp_pairs = []
 for p in perspectives:
@@ -63,18 +73,21 @@ def calc_mental_state(perspective, context):
 
 # TODO: Make this work
 def update_posterior(posterior, signal, context):
-    in_language = log(1 - noise)
-    out_of_language = log(noise / (num_signals - 1))
     new_posterior = []
     for i in range(len(posterior)): # for each hypothesis
+        language = lp_pairs[i][0]
         ref_distribution = calc_mental_state(lp_pairs[i][1], context)
         marginalize = []
         for meaning in meanings:
-            if (meaning, signal) in lp_pairs[i][0]:
+            signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
+            num_signals_for_r = sum([int(i) for i in language[meaning]])
+            if signal in signals_for_r:
+                in_language = log((1 - noise) / num_signals_for_r)
                 marginalize.append(ref_distribution[meaning] + in_language)
             else:
+                out_of_language = log(noise / (num_signals - num_signals_for_r))
                 marginalize.append(ref_distribution[meaning] + out_of_language)
-        # print(marginalize)
+        # print(exp(logsumexp(marginalize)))
         new_posterior.append(posterior[i] + logsumexp(marginalize))
     return utilities.normalize_logprobs(new_posterior)
 
@@ -88,11 +101,29 @@ def produce(system, context):
         signal = random.choice(other_signals)
     return [signal, context]
 
-speaker = lp_pairs[5]
+speaker1 = lp_pairs[188]
+speaker2 = lp_pairs[0]
+speaker3 = lp_pairs[10]
+# speaker = lp_pairs[5]
+# print(lp_pairs.index([['100', '010', '001'], 0]))
 post = priors
-contexts = [[0.1, 0.5], [0.7, 0.3], [0.9, 0.1], [0.1, 0.9], [0.5, 0.5], [0.1, 0.5], [0.7, 0.3], [0.9, 0.1], [0.1, 0.9], [0.5, 0.5]]
-for i in range(10):
-    d = produce(speaker, contexts[i])
+contexts = [[random.random(), random.random(), random.random()] for i in range(500)]
+posterior_list1 = [exp(post[5])]
+posterior_list2 = [exp(post[5])]
+posterior_list3 = [exp(post[5])]
+for i in range(300):
+    d = produce(speaker1, contexts[i])
     post = update_posterior(post, d[0], d[1])
-    # print(post)
-    print(exp(post[5]))
+    posterior_list1.append(exp(post[188]))
+# for i in range(100):
+#     d = produce(speaker2, contexts[i])
+#     post = update_posterior(post, d[0], d[1])
+#     posterior_list2.append(exp(post[0]))
+# for i in range(100):
+#     d = produce(speaker3, contexts[i])
+#     post = update_posterior(post, d[0], d[1])
+#     posterior_list3.append(exp(post[10]))
+plt.plot(posterior_list1)
+# plt.plot(posterior_list2)
+# plt.plot(posterior_list3)
+plt.savefig('plot.png')
