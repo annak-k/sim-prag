@@ -45,8 +45,8 @@ for p in perspectives:
         lp_pairs.append([l, p])
         priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)))
 
-        p_prior = log(0.9) if p == p_learner else log(0.1)
-        priors_egocentric.append(p_prior + log(1/len(languages)))
+        # p_prior = log(0.9) if p == p_learner else log(0.1)
+        # priors_egocentric.append(p_prior + log(1/len(languages)))
 
 
 def sample(posterior):
@@ -80,7 +80,10 @@ def update_posterior(posterior, signal, context):
             num_signals_for_r = len(signals_for_r)
             # compute the product of the probability that the speaker chooses referent r and that signal s is produced 
             if signal in signals_for_r:
-                in_language = log((1 - noise) / num_signals_for_r)
+                if num_signals_for_r == num_signals:
+                    in_language = log(1 / num_signals_for_r)
+                else:
+                    in_language = log((1 - noise) / num_signals_for_r)
                 marginalize.append(ref_distribution[meaning] + in_language)
             else:
                 out_of_language = log(noise / (num_signals - num_signals_for_r))
@@ -93,16 +96,22 @@ def produce(system, context):
     language = system[0]
     meaning = sample(calc_mental_state(system[1], context))
     signal = signals[utilities.wta(language[meaning])]
-    if random.random() < noise:
+
+    signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
+    num_signals_for_r = len(signals_for_r)
+    # with small probability (noise), pick a signal that doesn't correspond to
+    # the selected meaning in the given language
+    if random.random() < noise and num_signals_for_r != 3:
         other_signals = deepcopy(signals)
-        other_signals.remove(signal)
-        signal = random.choice(other_signals)
+        for s in signals_for_r:
+            other_signals.remove(s)
+        signal = random.choice(other_signals) 
     return [signal, context]
 
 def plot_graph(results_list):
     colors = ['darkseagreen', 'mediumpurple', 'steelblue']
     labels = ['Most informative', 'Least informative', 'Medium informative']
-
+    
     for i in range(len(results_list)):
         average = []
         for result in results_list[i]:
@@ -119,27 +128,26 @@ def plot_graph(results_list):
     plt.ylabel('posterior')
     plt.legend()
     plt.grid()
-    plt.savefig('combined_plot.png')
+    plt.savefig('test_plot.png')
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
-    post = deepcopy(priors)
-    posterior_list = [exp(post[hypoth_index])]
+    posteriors = deepcopy(priors)
+    posterior_list = [exp(posteriors[hypoth_index])]
     for i in range(no_productions):
         d = produce(speaker, contexts[i])
-        post = update_posterior(post, d[0], d[1])
-        posterior_list.append(exp(post[hypoth_index]))
+        posteriors = update_posterior(posteriors, d[0], d[1])
+        posterior_list.append(exp(posteriors[hypoth_index]))
     return posterior_list
 
 speaker1 = lp_pairs[188]
 speaker2 = lp_pairs[0]
 speaker3 = lp_pairs[182]
-# speaker = lp_pairs[5]
-# print(lp_pairs.index([[['1','0','0'], ['0','1','0'], ['1','1','1']], 0]))
 contexts = [[random.random(), random.random(), random.random()] for i in range(500)]
-# posterior_list1 = [exp(post[188])]
+
 runs1 = []
 runs2 = []
 runs3 = []
+# try lexicon where only one signal is used for every meaning
 for i in range(10):
     post_list1 = simulation(speaker1, 300, priors_unbiased, 188, contexts)
     runs1.append(post_list1)
@@ -149,25 +157,3 @@ for i in range(10):
     runs3.append(post_list3)
 all_runs = [runs1, runs2, runs3]
 plot_graph(all_runs)
-# post = deepcopy(priors_unbiased)
-# posterior_list2 = [exp(post[0])]
-# for i in range(100):
-#     d = produce(speaker2, contexts[i])
-#     post = update_posterior(post, d[0], d[1])
-#     posterior_list2.append(exp(post[0]))
-# post = deepcopy(priors_unbiased)
-# posterior_list3 = [exp(post[182])]
-# for i in range(100):
-#     d = produce(speaker3, contexts[i])
-#     post = update_posterior(post, d[0], d[1])
-#     posterior_list3.append(exp(post[182]))
-# plt.plot(posterior_list1, label="Most informative")
-# plt.plot(posterior_list2, label="Not informative")
-# plt.plot(posterior_list3, label="Kinda informative")
-# plt.ylabel("Posterior probability")
-# plt.xlabel("Number of data points seen")
-# plt.legend()
-# plt.savefig('plot.png')
-# print(posterior_list1)
-# print(posterior_list2)
-# print(posterior_list3)
