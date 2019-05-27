@@ -4,7 +4,8 @@ from IPython.display import set_matplotlib_formats
 set_matplotlib_formats('svg', 'pdf')
 
 from math import log, log1p, exp
-from scipy.special import logsumexp
+from scipy.special import logsumexp, softmax
+from numpy import argmax
 
 from copy import deepcopy
 
@@ -17,6 +18,7 @@ num_signals = 3
 meanings = [0, 1, 2]
 signals = ['a', 'b', 'c']
 p_learner = 1
+alpha = 3.0
 # num_signals = 2
 # meanings= [0, 1]
 # signals = ['a', 'b']
@@ -45,8 +47,8 @@ for p in perspectives:
         lp_pairs.append([l, p])
         priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)))
 
-        # p_prior = log(0.9) if p == p_learner else log(0.1)
-        # priors_egocentric.append(p_prior + log(1/len(languages)))
+        p_prior = log(0.9) if p == p_learner else log(0.1)
+        priors_egocentric.append(p_prior + log(1/len(languages)))
 
 
 def sample(posterior):
@@ -66,6 +68,7 @@ def calc_mental_state(perspective, context):
     each lexicon/perspective pair based on the observed signal
     and context """
 def update_posterior(posterior, signal, context):
+    # TODO: implement level-2 listener
     new_posterior = []
     for i in range(len(posterior)): # for each hypothesis
         language = lp_pairs[i][0]
@@ -92,10 +95,17 @@ def update_posterior(posterior, signal, context):
         new_posterior.append(posterior[i] + logsumexp(marginalize))
     return utilities.normalize_logprobs(new_posterior)
 
+""" Negative surprisal of the intended referent given the signal """
+def signal_utility(signal, referent):
+    return 0
+
 def produce(system, context):
     language = system[0]
     meaning = sample(calc_mental_state(system[1], context))
-    signal = signals[utilities.wta(language[meaning])]
+    # TODO: implement level-1 speaker - softmax over utility function, subject to parameter alpha
+    signal = signals[argmax(softmax([signal_utility(s, meaning) for s in signals]))]
+
+    # signal = signals[utilities.wta(language[meaning])]
 
     signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
     num_signals_for_r = len(signals_for_r)
@@ -150,11 +160,11 @@ runs2 = []
 runs3 = []
 
 for i in range(10):
-    post_list1 = simulation(speaker1, 300, priors_unbiased, 188, contexts)
+    post_list1 = simulation(speaker1, 300, priors_egocentric, 188, contexts)
     runs1.append(post_list1)
-    post_list2 = simulation(speaker2, 300, priors_unbiased, 171, contexts)
+    post_list2 = simulation(speaker2, 300, priors_egocentric, 171, contexts)
     runs2.append(post_list2)
-    post_list3 = simulation(speaker3, 300, priors_unbiased, 182, contexts)
+    post_list3 = simulation(speaker3, 300, priors_egocentric, 182, contexts)
     runs3.append(post_list3)
 all_runs = [runs1, runs2, runs3]
 # all_runs = [runs2]
