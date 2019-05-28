@@ -64,6 +64,25 @@ def calc_mental_state(perspective, context):
         distribution.append(log(1 - abs(perspective - o)))
     return utilities.normalize_logprobs(distribution)
 
+""" The perspective-taking listener uses Bayes rule to compute the
+    probability of a certain referent being intended by the speaker given the 
+    produced signal, a language, and the listener's model of the speaker's 
+    distribution over referents given their perspective """
+def list1_lit_spkr(signal, meaning, language, ref_distribution):
+    # get the list of signals which can be used for the given meaning
+    signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
+    num_signals_for_r = len(signals_for_r)
+    # compute the product of the probability that the speaker chooses referent r and that signal s is produced 
+    if signal in signals_for_r:
+        if num_signals_for_r == num_signals:
+            in_language = log(1 / num_signals_for_r)
+        else:
+            in_language = log((1 - noise) / num_signals_for_r)
+        return ref_distribution[meaning] + in_language
+    else:
+        out_of_language = log(noise / (num_signals - num_signals_for_r))
+        return ref_distribution[meaning] + out_of_language
+
 """ Update the posterior probabilities the learner has assigned to
     each lexicon/perspective pair based on the observed signal
     and context """
@@ -78,34 +97,23 @@ def update_posterior(posterior, signal, context):
 
         marginalize = []
         for meaning in meanings:
-            # get the list of signals which can be used for the given meaning
-            signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
-            num_signals_for_r = len(signals_for_r)
-            # compute the product of the probability that the speaker chooses referent r and that signal s is produced 
-            if signal in signals_for_r:
-                if num_signals_for_r == num_signals:
-                    in_language = log(1 / num_signals_for_r)
-                else:
-                    in_language = log((1 - noise) / num_signals_for_r)
-                marginalize.append(ref_distribution[meaning] + in_language)
-            else:
-                out_of_language = log(noise / (num_signals - num_signals_for_r))
-                marginalize.append(ref_distribution[meaning] + out_of_language)
+            marginalize.append(list1_lit_spkr(signal, meaning, language, ref_distribution))
         
         new_posterior.append(posterior[i] + logsumexp(marginalize))
     return utilities.normalize_logprobs(new_posterior)
 
 """ Negative surprisal of the intended referent given the signal """
 def signal_utility(signal, referent):
+    # TODO: implement negative surprisal using model of Ln-1
     return 0
 
 def produce(system, context):
     language = system[0]
     meaning = sample(calc_mental_state(system[1], context))
     # TODO: implement level-1 speaker - softmax over utility function, subject to parameter alpha
-    signal = signals[argmax(softmax([signal_utility(s, meaning) for s in signals]))]
+    # signal = signals[sample(softmax([signal_utility(s, meaning) for s in signals]))]
 
-    # signal = signals[utilities.wta(language[meaning])]
+    signal = signals[utilities.wta(language[meaning])]
 
     signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
     num_signals_for_r = len(signals_for_r)
@@ -138,7 +146,7 @@ def plot_graph(results_list):
     plt.ylabel('posterior')
     plt.legend()
     plt.grid()
-    plt.savefig('combined_plot3.png')
+    plt.savefig('test_plot.png')
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
@@ -159,13 +167,13 @@ runs1 = []
 runs2 = []
 runs3 = []
 
-for i in range(10):
-    post_list1 = simulation(speaker1, 300, priors_egocentric, 188, contexts)
+for i in range(3):
+    post_list1 = simulation(speaker1, 100, priors_egocentric, 188, contexts)
     runs1.append(post_list1)
-    post_list2 = simulation(speaker2, 300, priors_egocentric, 171, contexts)
-    runs2.append(post_list2)
-    post_list3 = simulation(speaker3, 300, priors_egocentric, 182, contexts)
-    runs3.append(post_list3)
-all_runs = [runs1, runs2, runs3]
+    # post_list2 = simulation(speaker2, 300, priors_egocentric, 171, contexts)
+    # runs2.append(post_list2)
+    # post_list3 = simulation(speaker3, 300, priors_egocentric, 182, contexts)
+    # runs3.append(post_list3)
+all_runs = [runs1]
 # all_runs = [runs2]
 plot_graph(all_runs)
