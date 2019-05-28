@@ -102,18 +102,27 @@ def update_posterior(posterior, signal, context):
         new_posterior.append(posterior[i] + logsumexp(marginalize))
     return utilities.normalize_logprobs(new_posterior)
 
-""" Negative surprisal of the intended referent given the signal """
-def signal_utility(signal, referent):
-    # TODO: implement negative surprisal using model of Ln-1
-    return 0
+""" The level-1 pragmatic speaker computes the probability of producing each signal
+    given the intended meaning, their language, and their mental state
+    (a distrubtion over meanings given their perspective and the context) """
+def spkr1_production_probs(meaning, language, mental_state):
+    # compute the utility of each signal as the negative surprisal of the intended
+    # referent given the signal, for the listener
+    signal_utility = [alpha*list1_lit_spkr(s, meaning, language, mental_state) for s in signals]
+    
+    # use softmax to get distribution over signals
+    return softmax(signal_utility)
 
 def produce(system, context):
     language = system[0]
-    meaning = sample(calc_mental_state(system[1], context))
-    # TODO: implement level-1 speaker - softmax over utility function, subject to parameter alpha
-    # signal = signals[sample(softmax([signal_utility(s, meaning) for s in signals]))]
+    perspective = system[1]
+    mental_state = calc_mental_state(perspective, context)
+    meaning = sample(mental_state)
+    
+    # choose the best signal given the pragmatically-derived probability distribution
+    signal = signals[argmax(spkr1_production_probs(meaning, language, mental_state))]
 
-    signal = signals[utilities.wta(language[meaning])]
+    # signal = signals[utilities.wta(language[meaning])] # literal speaker
 
     signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
     num_signals_for_r = len(signals_for_r)
@@ -167,7 +176,7 @@ runs1 = []
 runs2 = []
 runs3 = []
 
-for i in range(3):
+for i in range(5):
     post_list1 = simulation(speaker1, 100, priors_egocentric, 188, contexts)
     runs1.append(post_list1)
     # post_list2 = simulation(speaker2, 300, priors_egocentric, 171, contexts)
