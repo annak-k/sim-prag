@@ -14,6 +14,7 @@ import utilities
 """ Parameters """
 noise = 0.05
 perspectives = [0, 1]
+pragmatic_levels = [0, 1]
 num_signals = 3
 meanings = [0, 1, 2]
 signals = ['a', 'b', 'c']
@@ -39,16 +40,17 @@ for i in range(pow(2, 9), 0, -1):
                 [string[6],string[7],string[8]]])
 
 # generate list of language-perspective pairs and generate priors
-lp_pairs = []
+hypotheses = []
 priors_unbiased = []
 priors_egocentric = []
-for p in perspectives:
-    for l in languages:
-        lp_pairs.append([l, p])
-        priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)))
+for pl in pragmatic_levels:
+    for p in perspectives:
+        for l in languages:
+            hypotheses.append([l, p, pl])
+            priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)))
 
-        p_prior = log(0.9) if p == p_learner else log(0.1)
-        priors_egocentric.append(p_prior + log(1/len(languages)))
+            p_prior = log(0.9) if p == p_learner else log(0.1)
+            priors_egocentric.append(p_prior + log(1/len(languages)))
 
 """ Pick a meaning with probability proportional to its designated probability """
 def sample(posterior):
@@ -83,15 +85,6 @@ def list1_lit_spkr(signal, meaning, language, ref_distribution):
         out_of_language = log(noise / (num_signals - num_signals_for_r))
         return ref_distribution[meaning] + out_of_language
 
-def list1_perception_matrix(language, ref_distribution):
-    mat = []
-    for s in signals:
-        row = []
-        for m in meanings:
-            row.append(list1_lit_spkr(s, m, language, ref_distribution))
-        mat.append(utilities.normalize_logprobs(row))
-    return mat
-
 """ The level-2 pragmatic listener """
 # TODO: fix the way the likelihood is computed
 def list2_spkr1(signal, meaning, language, ref_distribution):
@@ -114,8 +107,8 @@ def list2_spkr1(signal, meaning, language, ref_distribution):
 def update_posterior(posterior, signal, context):
     new_posterior = []
     for i in range(len(posterior)): # for each hypothesis
-        language = lp_pairs[i][0]
-        perspective = lp_pairs[i][1]
+        language = hypotheses[i][0]
+        perspective = hypotheses[i][1]
 
         ref_distribution = calc_mental_state(perspective, context)
 
@@ -133,7 +126,7 @@ def update_posterior(posterior, signal, context):
 def spkr1_production_probs(meaning, language, mental_state):
     # compute the utility of each signal as the negative surprisal of the intended
     # referent given the signal, for the listener
-    signal_utility = [alpha*list1_perception_matrix(language, mental_state)[s][meaning] for s in range(len(signals))]
+    signal_utility = [alpha*list1_lit_spkr(s, meaning, language, mental_state) for s in signals]
     
     # use softmax to get distribution over signals
     return [log(p) for p in softmax(signal_utility)]
@@ -142,21 +135,30 @@ def spkr1_production_probs(meaning, language, mental_state):
 def produce(system, context):
     language = system[0]
     perspective = system[1]
+    pragmatic_lvl = system[2]
     mental_state = calc_mental_state(perspective, context)
     meaning = sample(mental_state)
     
+    """ Production is done differently depending on if the speaker is pragmatic or not """
+    if pragmatic_lvl == 0:
+        signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
+        num_signals_for_r = len(signals_for_r)
+        # with small probability (noise), pick a signal that doesn't correspond to
+        # the selected meaning in the given language
+        if random.random() < noise and num_signals_for_r != 3:
+            other_signals = deepcopy(signals)
+            for s in signals_for_r:
+                other_signals.remove(s)
+            signal = random.choice(other_signals)
     # choose the best signal given the pragmatically-derived probability distribution
-    signal = signals[utilities.log_roulette_wheel(spkr1_production_probs(meaning, language, mental_state))]
-
-    # signal = signals[utilities.wta(language[meaning])] # literal speaker
-
-    # signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
-    # num_signals_for_r = len(signals_for_r)
-    # with small probability (noise), pick a different signal
-    if random.random() < noise:
-        other_signals = deepcopy(signals)
-        other_signals.remove(signal)
-        signal = random.choice(other_signals) 
+    elif pragmatic_lvl == 1:
+        signal = signals[utilities.log_roulette_wheel(spkr1_production_probs(meaning, language, mental_state))]
+        
+        # with small probability (noise), pick a different signal
+        if random.random() < noise:
+            other_signals = deepcopy(signals)
+            other_signals.remove(signal)
+            signal = random.choice(other_signals) 
     return [signal, context]
 
 def plot_graph(results_list):
@@ -179,7 +181,7 @@ def plot_graph(results_list):
     plt.ylabel('posterior')
     plt.legend()
     plt.grid()
-    plt.savefig('prag_plot_with_noise.png')
+    plt.savefig('prag_test_plot2.png')
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
@@ -190,10 +192,10 @@ def simulation(speaker, no_productions, priors, hypoth_index, contexts):
         posterior_list.append(exp(posteriors[hypoth_index]))
     return posterior_list
 
-speaker1 = lp_pairs[188] # lexicon where each meaning is associated with its corresponding signal
-# speaker2 = lp_pairs[0] # lexicon where every signal is used for every meaning
-speaker3 = lp_pairs[171] # lexicon where only one signal is used for every meaning
-speaker2 = lp_pairs[182] # lexicon where the last meaning is associated with all signals
+speaker1 = hypotheses[188] # lexicon where each meaning is associated with its corresponding signal
+# speaker2 = hypotheses[0] # lexicon where every signal is used for every meaning
+speaker3 = hypotheses[171] # lexicon where only one signal is used for every meaning
+speaker2 = hypotheses[182] # lexicon where the last meaning is associated with all signals
 contexts = [[random.random(), random.random(), random.random()] for i in range(500)]
 
 runs1 = []
@@ -210,16 +212,3 @@ for i in range(5):
 all_runs = [runs1, runs2, runs3]
 # # all_runs = [runs2]
 plot_graph(all_runs)
-
-
-## DEBUGGING ##
-# speaker_test = lp_pairs[497] # lexicon where the last meaning is associated with all signals
-# d = produce(speaker_test, [0.1, 0.2, 0.9])
-# print([exp(p) for p in calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9])])
-# for m in meanings:
-#     spkr1_production_probs(m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
-# update_posterior(priors_egocentric, d[0], d[1])
-# for s in signals:
-#     for m in meanings:
-        # list1_lit_spkr(s, m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
-        # list2_spkr1(s, m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
