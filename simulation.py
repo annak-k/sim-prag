@@ -1,7 +1,5 @@
 import random
 import matplotlib.pyplot as plt
-from IPython.display import set_matplotlib_formats
-set_matplotlib_formats('svg', 'pdf')
 
 from math import log, log1p, exp
 from scipy.special import logsumexp
@@ -128,7 +126,7 @@ def plot_graph(results_list):
     plt.ylabel('posterior')
     plt.legend()
     plt.grid()
-    plt.savefig('combined_plot4.png')
+    plt.savefig('combined_plot.png')
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)

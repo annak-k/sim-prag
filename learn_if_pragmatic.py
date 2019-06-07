@@ -1,7 +1,5 @@
 import random
 import matplotlib.pyplot as plt
-from IPython.display import set_matplotlib_formats
-set_matplotlib_formats('svg', 'pdf')
 
 from math import log, log1p, exp
 from scipy.special import logsumexp, softmax
@@ -85,8 +83,16 @@ def list1_lit_spkr(signal, meaning, language, ref_distribution):
         out_of_language = log(noise / (num_signals - num_signals_for_r))
         return ref_distribution[meaning] + out_of_language
 
+def list1_perception_matrix(language, ref_distribution):
+    mat = []
+    for s in signals:
+        row = []
+        for m in meanings:
+            row.append(list1_lit_spkr(s, m, language, ref_distribution))
+        mat.append(utilities.normalize_logprobs(row))
+    return mat
+
 """ The level-2 pragmatic listener """
-# TODO: fix the way the likelihood is computed
 def list2_spkr1(signal, meaning, language, ref_distribution):
     # get the list of signals which can be used for the given meaning
     s_index = signals.index(signal)
@@ -109,13 +115,16 @@ def update_posterior(posterior, signal, context):
     for i in range(len(posterior)): # for each hypothesis
         language = hypotheses[i][0]
         perspective = hypotheses[i][1]
+        pragmatic_lvl = hypotheses[i][2]
 
         ref_distribution = calc_mental_state(perspective, context)
 
         marginalize = []
         for meaning in meanings:
-            marginalize.append(list2_spkr1(signal, meaning, language, ref_distribution))
-            # marginalize.append(list1_lit_spkr(signal, meaning, language, ref_distribution)) # level-1 listener
+            if pragmatic_lvl == 0:
+                marginalize.append(list1_lit_spkr(signal, meaning, language, ref_distribution)) # level-1 listener
+            elif pragmatic_lvl == 1:
+                marginalize.append(list2_spkr1(signal, meaning, language, ref_distribution))
         
         new_posterior.append(posterior[i] + logsumexp(marginalize))
     return utilities.normalize_logprobs(new_posterior)
@@ -126,7 +135,7 @@ def update_posterior(posterior, signal, context):
 def spkr1_production_probs(meaning, language, mental_state):
     # compute the utility of each signal as the negative surprisal of the intended
     # referent given the signal, for the listener
-    signal_utility = [alpha*list1_lit_spkr(s, meaning, language, mental_state) for s in signals]
+    signal_utility = [alpha*list1_perception_matrix(language, mental_state)[s][meaning] for s in range(len(signals))]
     
     # use softmax to get distribution over signals
     return [log(p) for p in softmax(signal_utility)]
@@ -141,6 +150,8 @@ def produce(system, context):
     
     """ Production is done differently depending on if the speaker is pragmatic or not """
     if pragmatic_lvl == 0:
+        signal = signals[utilities.wta(language[meaning])]
+
         signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
         num_signals_for_r = len(signals_for_r)
         # with small probability (noise), pick a signal that doesn't correspond to
@@ -181,7 +192,7 @@ def plot_graph(results_list):
     plt.ylabel('posterior')
     plt.legend()
     plt.grid()
-    plt.savefig('prag_test_plot2.png')
+    plt.savefig('predict_prag_test.png')
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
@@ -202,12 +213,12 @@ runs1 = []
 runs2 = []
 runs3 = []
 
-for i in range(5):
-    post_list1 = simulation(speaker1, 300, priors_egocentric, 188, contexts)
+for i in range(3):
+    post_list1 = simulation(speaker1, 100, priors_egocentric, 188, contexts)
     runs1.append(post_list1)
-    post_list2 = simulation(speaker2, 300, priors_egocentric, 182, contexts)
+    post_list2 = simulation(speaker2, 100, priors_egocentric, 182, contexts)
     runs2.append(post_list2)
-    post_list3 = simulation(speaker3, 300, priors_egocentric, 171, contexts)
+    post_list3 = simulation(speaker3, 100, priors_egocentric, 171, contexts)
     runs3.append(post_list3)
 all_runs = [runs1, runs2, runs3]
 # # all_runs = [runs2]

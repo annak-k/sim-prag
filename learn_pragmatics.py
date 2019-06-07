@@ -1,7 +1,5 @@
 import random
 import matplotlib.pyplot as plt
-from IPython.display import set_matplotlib_formats
-set_matplotlib_formats('svg', 'pdf')
 
 from math import log, log1p, exp
 from scipy.special import logsumexp, softmax
@@ -105,7 +103,7 @@ def list2_spkr1(signal, meaning, language, ref_distribution):
         noisy_speaker_probs[s] = noisy_speaker_probs[s] + log(1 - noise)
         other_signals = [noisy_speaker_probs[os] for os in range(len(noisy_speaker_probs)) if os != s]
         noisy_speaker_probs[s] = logsumexp([noisy_speaker_probs[s], (log(noise) + logsumexp(other_signals)) - log(len(signals) - 1)])
-
+    # print(exp(noisy_speaker_probs[s_index]))
     return ref_distribution[meaning] + noisy_speaker_probs[s_index]
 
 """ Update the posterior probabilities the learner has assigned to
@@ -148,10 +146,6 @@ def produce(system, context):
     # choose the best signal given the pragmatically-derived probability distribution
     signal = signals[utilities.log_roulette_wheel(spkr1_production_probs(meaning, language, mental_state))]
 
-    # signal = signals[utilities.wta(language[meaning])] # literal speaker
-
-    # signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
-    # num_signals_for_r = len(signals_for_r)
     # with small probability (noise), pick a different signal
     if random.random() < noise:
         other_signals = deepcopy(signals)
@@ -179,7 +173,7 @@ def plot_graph(results_list):
     plt.ylabel('posterior')
     plt.legend()
     plt.grid()
-    plt.savefig('prag_plot_with_noise.png')
+    plt.savefig('prag_plot_with_noise2.png')
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
@@ -200,7 +194,7 @@ runs1 = []
 runs2 = []
 runs3 = []
 
-for i in range(5):
+for i in range(10):
     post_list1 = simulation(speaker1, 300, priors_egocentric, 188, contexts)
     runs1.append(post_list1)
     post_list2 = simulation(speaker2, 300, priors_egocentric, 182, contexts)
@@ -219,7 +213,7 @@ plot_graph(all_runs)
 # for m in meanings:
 #     spkr1_production_probs(m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
 # update_posterior(priors_egocentric, d[0], d[1])
-# for s in signals:
-#     for m in meanings:
-        # list1_lit_spkr(s, m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
+# for m in meanings:
+#     for s in signals:
+#         list1_lit_spkr(s, m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
         # list2_spkr1(s, m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
