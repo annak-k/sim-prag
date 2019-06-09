@@ -173,7 +173,7 @@ def plot_graph(results_list):
     plt.ylabel('posterior')
     plt.legend()
     plt.grid()
-    plt.savefig('prag_plot_with_noise2.png')
+    plt.savefig('prag_combined_plot_test.png')
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
@@ -188,7 +188,18 @@ speaker1 = lp_pairs[188] # lexicon where each meaning is associated with its cor
 # speaker2 = lp_pairs[0] # lexicon where every signal is used for every meaning
 speaker3 = lp_pairs[171] # lexicon where only one signal is used for every meaning
 speaker2 = lp_pairs[182] # lexicon where the last meaning is associated with all signals
-contexts = [[random.random(), random.random(), random.random()] for i in range(500)]
+
+#[0.1, 0.2, 0.9]  and [0.1, 0.8, 0.9]
+contexts = []
+for i in range(25):
+    for c in [[0.1, 0.2, 0.9], [0.1, 0.8, 0.9]]:
+        contexts.append([c[0], c[1], c[2]])
+        contexts.append([c[1], c[0], c[2]])
+        contexts.append([c[1], c[2], c[0]])
+        contexts.append([c[2], c[1], c[0]])
+        contexts.append([c[2], c[0], c[1]])
+        contexts.append([c[0], c[2], c[1]])
+# contexts = [[random.random(), random.random(), random.random()] for i in range(500)]
 
 runs1 = []
 runs2 = []
