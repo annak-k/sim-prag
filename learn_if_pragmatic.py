@@ -46,10 +46,10 @@ for pl in pragmatic_levels:
     for p in perspectives:
         for l in languages:
             hypotheses.append([l, p, pl])
-            priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)))
+            priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)) + log(1/len(pragmatic_levels)))
 
             p_prior = log(0.9) if p == p_learner else log(0.1)
-            priors_egocentric.append(p_prior + log(1/len(languages)))
+            priors_egocentric.append(p_prior + log(1/len(languages)) + log(1/len(pragmatic_levels)))
 
 """ Pick a meaning with probability proportional to its designated probability """
 def sample(posterior):
