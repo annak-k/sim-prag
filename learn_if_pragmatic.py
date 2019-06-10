@@ -1,5 +1,6 @@
 import random
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 
 from math import log, log1p, exp
 from scipy.special import logsumexp, softmax
@@ -207,7 +208,17 @@ speaker1 = hypotheses[188] # lexicon where each meaning is associated with its c
 # speaker2 = hypotheses[0] # lexicon where every signal is used for every meaning
 speaker3 = hypotheses[171] # lexicon where only one signal is used for every meaning
 speaker2 = hypotheses[182] # lexicon where the last meaning is associated with all signals
-contexts = [[random.random(), random.random(), random.random()] for i in range(500)]
+
+contexts = []
+for i in range(25):
+    for c in [[0.1, 0.2, 0.9], [0.1, 0.8, 0.9]]:
+        contexts.append([c[0], c[1], c[2]])
+        contexts.append([c[1], c[0], c[2]])
+        contexts.append([c[1], c[2], c[0]])
+        contexts.append([c[2], c[1], c[0]])
+        contexts.append([c[2], c[0], c[1]])
+        contexts.append([c[0], c[2], c[1]])
+# contexts = [[random.random(), random.random(), random.random()] for i in range(500)]
 
 runs1 = []
 runs2 = []

@@ -1,5 +1,6 @@
 import random
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 
 from math import log, log1p, exp
 from scipy.special import logsumexp, softmax
