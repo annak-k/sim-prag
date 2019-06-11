@@ -11,35 +11,9 @@ import pickle
 
 import utilities
 
-""" Parameters """
-noise = 0.05
-perspectives = [0, 1]
-pragmatic_levels = [0, 1]
-num_signals = 3
-meanings = [0, 1, 2]
-signals = ['a', 'b', 'c']
-p_learner = 1
-alpha = 3.0
-
-""" Generate 3x3 lexicon matrices, only if every meaning has at least one signal """
-def generate_languages():
-    languages = []
-    for i in range(pow(2, 9), 0, -1):
-        string = str(format(i, 'b'))
-        if len(string) >= 7: # eliminate strings that don't have a signal for meaning 0
-            while len(string) < 9:
-                string = '0' + string # pad with 0s
-            # eliminate strings that don't have a signal for meanings 1 and 2
-            if string[-3:] != '000' and string[3:-3] != '000':
-                # create matrix
-                languages.append([[string[0],string[1],string[2]],
-                    [string[3],string[4],string[5]],
-                    [string[6],string[7],string[8]]])
-    return np.array(languages)
-
 """ generate list of language-perspective pairs and generate priors """
 def generate_hypotheses():
-    languages = generate_languages()
+    languages = utilities.generate_languages()
     hypotheses = []
     priors_unbiased = [log(1/len(perspectives)) + log(1/len(languages)) + log(1/len(pragmatic_levels)) for i in range(len(perspectives) * len(languages) * len(pragmatic_levels))]
     priors_egocentric = []
@@ -242,6 +216,7 @@ if __name__ == "__main__":
     # Parameters
     noise = 0.05
     perspectives = [0, 1]
+    pragmatic_levels = [0, 1]
     num_signals = 3
     meanings = [0, 1, 2]
     signals = ['a', 'b', 'c']

@@ -36,3 +36,19 @@ def wta(items):
         if items[i] == maxweight:
             candidates.append(i)
     return random.choice(candidates)
+
+""" Generate 3x3 lexicon matrices, only if every meaning has at least one signal """
+def generate_languages():
+    languages = []
+    for i in range(pow(2, 9), 0, -1):
+        string = str(format(i, 'b'))
+        if len(string) >= 7: # eliminate strings that don't have a signal for meaning 0
+            while len(string) < 9:
+                string = '0' + string # pad with 0s
+            # eliminate strings that don't have a signal for meanings 1 and 2
+            if string[-3:] != '000' and string[3:-3] != '000':
+                # create matrix
+                languages.append([[string[0],string[1],string[2]],
+                    [string[3],string[4],string[5]],
+                    [string[6],string[7],string[8]]])
+    return np.array(languages)
