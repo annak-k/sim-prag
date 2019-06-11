@@ -9,6 +9,7 @@ from scipy.special import logsumexp
 from copy import deepcopy
 
 from argparse import ArgumentParser
+import pickle
 
 import utilities
 
@@ -37,10 +38,9 @@ def generate_hypotheses():
     for p in perspectives:
         for l in languages:
             lp_pairs.append([l, p])
-            # priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)))
 
-            # p_prior = log(0.9) if p == p_learner else log(0.1)
-            # priors_egocentric.append(p_prior + log(1/len(languages)))
+            p_prior = log(0.9) if p == p_learner else log(0.1)
+            priors_egocentric.append(p_prior + log(1/len(languages)))
     return [np.array(lp_pairs), np.array(priors_unbiased), np.array(priors_egocentric)]
 
 def sample(posterior):
@@ -146,15 +146,22 @@ def main():
     for _ in range(10):
         post_list1 = simulation(speaker1, 300, priors_unbiased, 188, contexts)
         runs1.append(post_list1)
+        with open(filename + '_runs1.pickle', 'wb') as f:
+            pickle.dump(runs1, f)
         post_list2 = simulation(speaker2, 300, priors_unbiased, 182, contexts)
         runs2.append(post_list2)
+        with open(filename + '_runs2.pickle', 'wb') as f:
+            pickle.dump(runs2, f)
         post_list3 = simulation(speaker3, 300, priors_unbiased, 171, contexts)
         runs3.append(post_list3)
+        with open(filename + '_runs3.pickle', 'wb') as f:
+            pickle.dump(runs3, f)
     runs1 = np.array(runs1)
     runs2 = np.array(runs2)
     runs3 = np.array(runs3)
-    all_runs = np.array([runs1, runs2, runs3])
-    plot_graph(all_runs)
+    data = np.array([runs1, runs2, runs3])
+    with open(filename + '_output.pickle', 'wb') as f:
+        pickle.dump(data, f)
 
 if __name__ == "__main__":  
     # Parameters
@@ -164,6 +171,7 @@ if __name__ == "__main__":
     meanings = [0, 1, 2]
     signals = ['a', 'b', 'c']
     p_learner = 1
+    filename = "literal"
 
     lp_pairs, priors_unbiased, priors_egocentric = generate_hypotheses()
     main()
