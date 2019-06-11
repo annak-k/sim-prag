@@ -1,6 +1,7 @@
 from math import log, log1p, exp
 from scipy.special import logsumexp
 import random
+import numpy as np
 
 def log_subtract(x,y):
     return x + log1p(-exp(y - x))
@@ -17,7 +18,7 @@ def normalize_logprobs(logprobs):
     normedlogs = []
     for logp in logprobs:
         normedlogs.append(logp - logtotal) #normalise - subtracting in the log domain equivalent to divising in the normal domain
-    return normedlogs
+    return np.array(normedlogs)
 
 def log_roulette_wheel(normedlogs):
     r=log(random.random()) #generate a random number in [0,1), then convert to log
