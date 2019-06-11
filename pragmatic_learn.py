@@ -1,53 +1,71 @@
 import random
-import matplotlib.pyplot as plt
-plt.switch_backend('agg')
+import numpy as np
 
 from math import log, log1p, exp
 from scipy.special import logsumexp, softmax
-from numpy import argmax
 
 from copy import deepcopy
 
+from argparse import ArgumentParser
+import pickle
+
 import utilities
 
-""" Parameters """
-noise = 0.05
-perspectives = [0, 1]
-num_signals = 3
-meanings = [0, 1, 2]
-signals = ['a', 'b', 'c']
-p_learner = 1
-alpha = 3.0
-# num_signals = 2
-# meanings= [0, 1]
-# signals = ['a', 'b']
-# languages = [[[1, 1], [1, 1]], [[1, 1], [1, 0]], [[1, 1], [0, 1]], [[1, 0], [1, 1]], [[1, 0], [1, 0]], [[1, 0], [0, 1]], [[0, 1], [1, 1]], [[0, 1], [1, 0]], [[0, 1], [0, 1]]]
-
 """ Generate 3x3 lexicon matrices, only if every meaning has at least one signal """
-languages = []
-for i in range(pow(2, 9), 0, -1):
-    string = str(format(i, 'b'))
-    if len(string) >= 7: # eliminate strings that don't have a signal for meaning 0
-        while len(string) < 9:
-            string = '0' + string # pad with 0s
-        # eliminate strings that don't have a signal for meanings 1 and 2
-        if string[-3:] != '000' and string[3:-3] != '000':
-            # create matrix
-            languages.append([[string[0],string[1],string[2]],
-                [string[3],string[4],string[5]],
-                [string[6],string[7],string[8]]])
+def generate_languages():
+    languages = []
+    for i in range(pow(2, 9), 0, -1):
+        string = str(format(i, 'b'))
+        if len(string) >= 7: # eliminate strings that don't have a signal for meaning 0
+            while len(string) < 9:
+                string = '0' + string # pad with 0s
+            # eliminate strings that don't have a signal for meanings 1 and 2
+            if string[-3:] != '000' and string[3:-3] != '000':
+                # create matrix
+                languages.append([[string[0],string[1],string[2]],
+                    [string[3],string[4],string[5]],
+                    [string[6],string[7],string[8]]])
+    return np.array(languages)
 
-# generate list of language-perspective pairs and generate priors
-lp_pairs = []
-priors_unbiased = []
-priors_egocentric = []
-for p in perspectives:
-    for l in languages:
-        lp_pairs.append([l, p])
-        priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)))
+""" generate list of language-perspective pairs and generate priors """
+def generate_hypotheses():
+    languages = generate_languages()
+    lp_pairs = []
+    priors_unbiased = [log(1/len(perspectives)) + log(1/len(languages)) for i in range(len(perspectives) * len(languages))]
+    priors_egocentric = []
+    for p in perspectives:
+        for l in languages:
+            lp_pairs.append([l, p])
 
-        p_prior = log(0.9) if p == p_learner else log(0.1)
-        priors_egocentric.append(p_prior + log(1/len(languages)))
+            p_prior = log(0.9) if p == p_learner else log(0.1)
+            priors_egocentric.append(p_prior + log(1/len(languages)))
+    return [np.array(lp_pairs), np.array(priors_unbiased), np.array(priors_egocentric)]
+
+# """ Generate 3x3 lexicon matrices, only if every meaning has at least one signal """
+# languages = []
+# for i in range(pow(2, 9), 0, -1):
+#     string = str(format(i, 'b'))
+#     if len(string) >= 7: # eliminate strings that don't have a signal for meaning 0
+#         while len(string) < 9:
+#             string = '0' + string # pad with 0s
+#         # eliminate strings that don't have a signal for meanings 1 and 2
+#         if string[-3:] != '000' and string[3:-3] != '000':
+#             # create matrix
+#             languages.append([[string[0],string[1],string[2]],
+#                 [string[3],string[4],string[5]],
+#                 [string[6],string[7],string[8]]])
+
+# # generate list of language-perspective pairs and generate priors
+# lp_pairs = []
+# priors_unbiased = []
+# priors_egocentric = []
+# for p in perspectives:
+#     for l in languages:
+#         lp_pairs.append([l, p])
+#         priors_unbiased.append(log(1/len(perspectives)) + log(1/len(languages)))
+
+#         p_prior = log(0.9) if p == p_learner else log(0.1)
+#         priors_egocentric.append(p_prior + log(1/len(languages)))
 
 """ Pick a meaning with probability proportional to its designated probability """
 def sample(posterior):
@@ -92,7 +110,6 @@ def list1_perception_matrix(language, ref_distribution):
     return mat
 
 """ The level-2 pragmatic listener """
-# TODO: fix the way the likelihood is computed
 def list2_spkr1(signal, meaning, language, ref_distribution):
     # get the list of signals which can be used for the given meaning
     s_index = signals.index(signal)
@@ -104,7 +121,7 @@ def list2_spkr1(signal, meaning, language, ref_distribution):
         noisy_speaker_probs[s] = noisy_speaker_probs[s] + log(1 - noise)
         other_signals = [noisy_speaker_probs[os] for os in range(len(noisy_speaker_probs)) if os != s]
         noisy_speaker_probs[s] = logsumexp([noisy_speaker_probs[s], (log(noise) + logsumexp(other_signals)) - log(len(signals) - 1)])
-    # print(exp(noisy_speaker_probs[s_index]))
+
     return ref_distribution[meaning] + noisy_speaker_probs[s_index]
 
 """ Update the posterior probabilities the learner has assigned to
@@ -154,28 +171,6 @@ def produce(system, context):
         signal = random.choice(other_signals) 
     return [signal, context]
 
-def plot_graph(results_list):
-    colors = ['darkseagreen', 'steelblue', 'mediumpurple']
-    labels = ['Most informative', 'Medium informative', 'Least informative']
-    
-    for i in range(len(results_list)):
-        average = []
-        for result in results_list[i]:
-            plt.plot(result, color=colors[i], alpha=0.3)
-
-        for j in range(len(results_list[i][0])):
-            total = 0
-            for result in results_list[i]:
-                total += result[j]
-            average.append(total / len(results_list[i]))
-
-        plt.plot(average, color=colors[i], label=labels[i])
-    plt.xlabel('data points seen')
-    plt.ylabel('posterior')
-    plt.legend()
-    plt.grid()
-    plt.savefig('prag_combined_plot_test.png')
-
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
     posterior_list = [exp(posteriors[hypoth_index])]
@@ -185,47 +180,53 @@ def simulation(speaker, no_productions, priors, hypoth_index, contexts):
         posterior_list.append(exp(posteriors[hypoth_index]))
     return posterior_list
 
-speaker1 = lp_pairs[188] # lexicon where each meaning is associated with its corresponding signal
-# speaker2 = lp_pairs[0] # lexicon where every signal is used for every meaning
-speaker3 = lp_pairs[171] # lexicon where only one signal is used for every meaning
-speaker2 = lp_pairs[182] # lexicon where the last meaning is associated with all signals
+def main():
+    speaker1 = lp_pairs[188] # lexicon where each meaning is associated with its corresponding signal
+    speaker3 = lp_pairs[171] # lexicon where only one signal is used for every meaning
+    speaker2 = lp_pairs[182] # lexicon where the last meaning is associated with all signals
 
-#[0.1, 0.2, 0.9]  and [0.1, 0.8, 0.9]
-contexts = []
-for i in range(25):
-    for c in [[0.1, 0.2, 0.9], [0.1, 0.8, 0.9]]:
-        contexts.append([c[0], c[1], c[2]])
-        contexts.append([c[1], c[0], c[2]])
-        contexts.append([c[1], c[2], c[0]])
-        contexts.append([c[2], c[1], c[0]])
-        contexts.append([c[2], c[0], c[1]])
-        contexts.append([c[0], c[2], c[1]])
-# contexts = [[random.random(), random.random(), random.random()] for i in range(500)]
+    # Generate maximally informative contexts, which are all possible permutations of
+    # [0.1, 0.2, 0.9] and [0.1, 0.8, 0.9] (12 in total)
+    contexts = []
+    for _ in range(25):
+        for c in [[0.1, 0.2, 0.9], [0.1, 0.8, 0.9]]:
+            contexts.append([c[0], c[1], c[2]])
+            contexts.append([c[1], c[0], c[2]])
+            contexts.append([c[1], c[2], c[0]])
+            contexts.append([c[2], c[1], c[0]])
+            contexts.append([c[2], c[0], c[1]])
+            contexts.append([c[0], c[2], c[1]])
 
-runs1 = []
-runs2 = []
-runs3 = []
+    runs1 = []
+    runs2 = []
+    runs3 = []
+    for _ in range(2):
+        post_list1 = simulation(speaker1, 100, priors_egocentric, 188, contexts)
+        runs1.append(post_list1)
+        with open(filename + '_runs1.pickle', 'wb') as f:
+            pickle.dump(runs1, f)
+        post_list2 = simulation(speaker2, 100, priors_egocentric, 182, contexts)
+        runs2.append(post_list2)
+        with open(filename + '_runs2.pickle', 'wb') as f:
+            pickle.dump(runs2, f)
+        post_list3 = simulation(speaker3, 100, priors_egocentric, 171, contexts)
+        runs3.append(post_list3)
+        with open(filename + '_runs3.pickle', 'wb') as f:
+            pickle.dump(runs3, f)
+    data = [runs1, runs2, runs3]
+    with open(filename + '_output.pickle', 'wb') as f:
+        pickle.dump(data, f)
 
-for i in range(10):
-    post_list1 = simulation(speaker1, 300, priors_egocentric, 188, contexts)
-    runs1.append(post_list1)
-    post_list2 = simulation(speaker2, 300, priors_egocentric, 182, contexts)
-    runs2.append(post_list2)
-    post_list3 = simulation(speaker3, 300, priors_egocentric, 171, contexts)
-    runs3.append(post_list3)
-all_runs = [runs1, runs2, runs3]
-# # all_runs = [runs2]
-plot_graph(all_runs)
+if __name__ == "__main__":  
+    # Parameters
+    noise = 0.05
+    perspectives = [0, 1]
+    num_signals = 3
+    meanings = [0, 1, 2]
+    signals = ['a', 'b', 'c']
+    p_learner = 1
+    alpha = 3.0
+    filename = "pragmatic"
 
-
-## DEBUGGING ##
-# speaker_test = lp_pairs[497] # lexicon where the last meaning is associated with all signals
-# d = produce(speaker_test, [0.1, 0.2, 0.9])
-# print([exp(p) for p in calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9])])
-# for m in meanings:
-#     spkr1_production_probs(m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
-# update_posterior(priors_egocentric, d[0], d[1])
-# for m in meanings:
-#     for s in signals:
-#         list1_lit_spkr(s, m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
-        # list2_spkr1(s, m, speaker_test[0], calc_mental_state(speaker_test[1], [0.1, 0.2, 0.9]))
+    lp_pairs, priors_unbiased, priors_egocentric = generate_hypotheses()
+    main()

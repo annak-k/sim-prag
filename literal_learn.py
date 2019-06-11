@@ -1,6 +1,4 @@
 import random
-import matplotlib.pyplot as plt
-plt.switch_backend('agg')
 import numpy as np
 
 from math import log, log1p, exp
@@ -101,28 +99,6 @@ def produce(system, context):
             other_signals.remove(s)
         signal = random.choice(other_signals) 
     return [signal, context]
-
-def plot_graph(results_list):
-    colors = ['darkseagreen', 'steelblue', 'mediumpurple']
-    labels = ['Most informative', 'Medium informative', 'Least informative']
-    
-    for i in range(len(results_list)):
-        average = np.zeros(len(results_list[i][0]))
-        for result in results_list[i]:
-            plt.plot(result, color=colors[i], alpha=0.3)
-
-        for j in range(len(results_list[i][0])):
-            total = 0
-            for result in results_list[i]:
-                total += result[j]
-            average[j] = total / len(results_list[i])
-
-        plt.plot(average, color=colors[i], label=labels[i])
-    plt.xlabel('data points seen')
-    plt.ylabel('posterior')
-    plt.legend()
-    plt.grid()
-    plt.savefig('test_plot.png')
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
