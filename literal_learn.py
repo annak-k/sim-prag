@@ -110,6 +110,11 @@ def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     return np.array(posterior_list)
 
 def main():
+    parser = ArgumentParser()
+    parser.add_argument("o", type=str, help="prefix for the output files")
+    args = parser.parse_args()
+    filename = args.o
+    
     speaker1 = lp_pairs[188] # lexicon where each meaning is associated with its corresponding signal
     speaker2 = lp_pairs[182] # lexicon where the last meaning is associated with all signals
     speaker3 = lp_pairs[171] # lexicon where only one signal is used for every meaning
@@ -147,7 +152,6 @@ if __name__ == "__main__":
     meanings = [0, 1, 2]
     signals = ['a', 'b', 'c']
     p_learner = 1
-    filename = "literal"
 
     lp_pairs, priors_unbiased, priors_egocentric = generate_hypotheses()
     main()

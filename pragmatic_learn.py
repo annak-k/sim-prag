@@ -155,6 +155,11 @@ def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     return np.array(posterior_list)
 
 def main():
+    parser = ArgumentParser()
+    parser.add_argument("o", type=str, help="prefix for the output files")
+    args = parser.parse_args()
+    filename = args.o
+
     speaker1 = lp_pairs[188] # lexicon where each meaning is associated with its corresponding signal
     speaker3 = lp_pairs[171] # lexicon where only one signal is used for every meaning
     speaker2 = lp_pairs[182] # lexicon where the last meaning is associated with all signals
@@ -175,16 +180,16 @@ def main():
     runs1 = []
     runs2 = []
     runs3 = []
-    for _ in range(2):
-        post_list1 = simulation(speaker1, 100, priors_egocentric, 188, contexts)
+    for _ in range(10):
+        post_list1 = simulation(speaker1, 300, priors_egocentric, 188, contexts)
         runs1.append(post_list1)
         with open(filename + '_runs1.pickle', 'wb') as f:
             pickle.dump(runs1, f)
-        post_list2 = simulation(speaker2, 100, priors_egocentric, 182, contexts)
+        post_list2 = simulation(speaker2, 300, priors_egocentric, 182, contexts)
         runs2.append(post_list2)
         with open(filename + '_runs2.pickle', 'wb') as f:
             pickle.dump(runs2, f)
-        post_list3 = simulation(speaker3, 100, priors_egocentric, 171, contexts)
+        post_list3 = simulation(speaker3, 300, priors_egocentric, 171, contexts)
         runs3.append(post_list3)
         with open(filename + '_runs3.pickle', 'wb') as f:
             pickle.dump(runs3, f)
@@ -204,7 +209,6 @@ if __name__ == "__main__":
     signals = ['a', 'b', 'c']
     p_learner = 1
     alpha = 3.0
-    filename = "pragmatic"
 
     lp_pairs, priors_unbiased, priors_egocentric = generate_hypotheses()
     main()
