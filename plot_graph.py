@@ -30,12 +30,13 @@ def plot_graph(name, title, results_list):
 def main():
     parser = ArgumentParser()
     parser.add_argument("f", type=str, help="the name of the file containing the results to plot")
+    parser.add_argument("o", type=str, help="the output filename for the plot")
     parser.add_argument("t", type=str, help="title of the plot", default="")
     args = parser.parse_args()
     
     with open(args.f + '.pickle', 'rb') as f:
         results = pickle.load(f)
-        plot_graph(args.f, args.t, results)
+        plot_graph(args.o, args.t, results)
 
 if __name__ == "__main__":
     main()
