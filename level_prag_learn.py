@@ -167,14 +167,14 @@ def main():
 
     # non-pragmatic speakers
     if args.p == 0:
-        speaker1 = hypotheses[188] # lexicon where each meaning is associated with its corresponding signal
-        speaker2 = hypotheses[182] # lexicon where the last meaning is associated with all signals
-        speaker3 = hypotheses[171] # lexicon where only one signal is used for every meaning
+        s1 = 188 # lexicon where each meaning is associated with its corresponding signal
+        s2 = 182 # lexicon where the last meaning is associated with all signals
+        s3 = 171 # lexicon where only one signal is used for every meaning
     elif args.p == 1:
         # pragmatic speakers
-        speaker1 = hypotheses[874] # lexicon where each meaning is associated with its corresponding signal
-        speaker2 = hypotheses[868] # lexicon where the last meaning is associated with all signals
-        speaker3 = hypotheses[857] # lexicon where only one signal is used for every meaning
+        s1 = 874 # lexicon where each meaning is associated with its corresponding signal
+        s2 = 868 # lexicon where the last meaning is associated with all signals
+        s3 = 857 # lexicon where only one signal is used for every meaning
 
     # Generate maximally informative contexts, which are all possible permutations of
     # [0.1, 0.2, 0.9] and [0.1, 0.8, 0.9] (12 in total)
@@ -193,15 +193,15 @@ def main():
     runs2 = []
     runs3 = []
     for _ in range(10):
-        post_list1 = simulation(speaker1, 300, priors_egocentric, 188, contexts)
+        post_list1 = simulation(hypotheses[s1], 300, priors_egocentric, s1, contexts)
         runs1.append(post_list1)
         with open(filename + '_' + str(args.p) + '_runs1.pickle', 'wb') as f:
             pickle.dump(runs1, f)
-        post_list2 = simulation(speaker2, 300, priors_egocentric, 182, contexts)
+        post_list2 = simulation(hypotheses[s2], 300, priors_egocentric, s2, contexts)
         runs2.append(post_list2)
         with open(filename + '_' + str(args.p) + '_runs2.pickle', 'wb') as f:
             pickle.dump(runs2, f)
-        post_list3 = simulation(speaker3, 300, priors_egocentric, 171, contexts)
+        post_list3 = simulation(hypotheses[s3], 300, priors_egocentric, s3, contexts)
         runs3.append(post_list3)
         with open(filename + '_' + str(args.p) + '_runs3.pickle', 'wb') as f:
             pickle.dump(runs3, f)
