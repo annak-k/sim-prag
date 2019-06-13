@@ -8,7 +8,7 @@ import pickle
 
 import utilities
 import hypotheses
-
+from plot_graph import plot_graph
 
 def sample(posterior):
     """ Pick an index in a list, with probability proportional to its designated probability """
@@ -32,7 +32,7 @@ def list1_lit_spkr(signal, meaning, language, ref_distribution):
     produced signal, a language, and the listener's model of the speaker's 
     distribution over referents given their perspective """
     # get the list of signals which can be used for the given meaning
-    signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
+    signals_for_r = signals[np.where(language[meaning] != '0')]
     num_signals_for_r = len(signals_for_r)
     # compute the product of the probability that the speaker chooses referent r and that signal s is produced 
     if signal in signals_for_r:
@@ -58,9 +58,7 @@ def list1_perception_matrix(language, ref_distribution):
 
 def list2_spkr1(signal, meaning, language, ref_distribution):
     """ The level-2 pragmatic listener """
-    # get the list of signals which can be used for the given meaning
-    s_index = signals.index(signal)
-
+    s_index = np.where(signals == signal)
     # compute the probability of the speaker producing the signal, with noise
     speaker_probs = spkr1_production_probs(meaning, language, ref_distribution)
     noisy_speaker_probs = deepcopy(speaker_probs)
@@ -91,7 +89,7 @@ def update_posterior(posterior, signal, context):
         elif pragmatic_lvl == 1:
             for m in meanings:
                 marginalize[m] = list2_spkr1(signal, m, language, ref_distribution) # level-2 listener
-        
+
         new_posterior[i] = posterior[i] + logsumexp(marginalize)
     return utilities.normalize_logprobs(new_posterior)
 
@@ -127,7 +125,7 @@ def produce(system, context):
         if random.random() < noise and num_signals_for_r != 3:
             other_signals = deepcopy(signals)
             for s in signals_for_r:
-                other_signals.remove(s)
+                other_signals = signals[np.where(signals != s)]
             signal = random.choice(other_signals)
     # choose the best signal given the pragmatically-derived probability distribution
     elif pragmatic_lvl == 1:
@@ -181,16 +179,18 @@ def main():
             contexts.append([c[0], c[2], c[1]])
     contexts = np.array(contexts)
 
-    runs = np.zeros((3, 1, 31))
+    runs = np.zeros((3, 10, 301))
     for i in range(1):
         for j in range(len(speakers)):
-            post_list = simulation(hypotheses[speakers[j]], 30, priors, speakers[j], contexts)
+            post_list = simulation(hypotheses[speakers[j]], 300, priors, speakers[j], contexts)
             runs[j][i] = post_list
             with open(filename + '_' + str(args.p) + '_runs' + str(j+1) +'.pickle', 'wb') as f:
                 pickle.dump(runs[j][i], f)
     data = np.array(runs)
     with open(filename + '_' + str(args.p) + '_output.pickle', 'wb') as f:
         pickle.dump(data, f)
+
+    plot_graph(filename, filename + " plot", data)
 
 
 if __name__ == "__main__":  
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     perspectives = [0, 1]
     pragmatic_levels = [0, 1]
     meanings = [0, 1, 2]
-    signals = ['a', 'b', 'c']
+    signals = np.array(['a', 'b', 'c'])
     p_learner = 1
     alpha = 3.0
 
