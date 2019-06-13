@@ -26,6 +26,7 @@ def plot_graph(name, title, results_list):
     plt.grid()
     plt.title(title)
     plt.savefig(name + '_plot.png')
+    plt.close()
 
 def main():
     parser = ArgumentParser()
@@ -34,7 +35,7 @@ def main():
     parser.add_argument("t", type=str, help="title of the plot", default="")
     args = parser.parse_args()
     
-    with open(args.f + '.pickle', 'rb') as f:
+    with open(args.f, 'rb') as f:
         results = pickle.load(f)
         plot_graph(args.o, args.t, results)
 

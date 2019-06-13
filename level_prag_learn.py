@@ -141,12 +141,14 @@ def produce(system, context):
 
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
-    posterior_list = [exp(posteriors[hypoth_index])]
+    # posterior_list = [exp(posteriors[hypoth_index])]
+    posterior_list = [np.exp(posteriors)]
     for i in range(no_productions):
         d = produce(speaker, contexts[i])
         posteriors = update_posterior(posteriors, d[0], d[1])
-        posterior_list.append(exp(posteriors[hypoth_index]))
-    return np.array(posterior_list)
+        # posterior_list.append(exp(posteriors[hypoth_index]))
+        posterior_list.append(np.exp(posteriors))
+    return np.swapaxes(np.array(posterior_list), 0, 1)
 
 
 def main():
@@ -156,15 +158,13 @@ def main():
     args = parser.parse_args()
     filename = args.o
 
-    if args.p == 0:
-        # non-pragmatic speakers
-        speakers = [188, 182, 171] 
-        # lexicon where each meaning is associated with its corresponding signal
-        # lexicon where the last meaning is associated with all signals
-        # lexicon where only one signal is used for every meaning
-    elif args.p == 1:
-        # pragmatic speakers
-        speakers = [874, 868, 857]
+    # lexicon where each meaning is associated with its corresponding signal
+    # lexicon where the last meaning is associated with all signals
+    # lexicon where only one signal is used for every meaning
+    # non-pragmatic speakers
+    literal_speakers = [188, 182, 171] 
+    # pragmatic speakers
+    prag_speakers = [874, 868, 857]    
 
     # Generate maximally informative contexts, which are all possible permutations of
     # [0.1, 0.2, 0.9] and [0.1, 0.8, 0.9] (12 in total)
@@ -179,18 +179,37 @@ def main():
             contexts.append([c[0], c[2], c[1]])
     contexts = np.array(contexts)
 
-    runs = np.zeros((3, 10, 301))
-    for i in range(1):
+    if args.p == 0:
+        speakers = literal_speakers
+        not_speakers = prag_speakers
+        plotnames = ["Learning the literal speaker (correct)", "Learning the pragmatic speaker (incorrect)"]
+    elif args.p == 1:
+        speakers = prag_speakers
+        not_speakers = literal_speakers
+        plotnames = ["Learning the pragmatic speaker (correct)", "Learning the literal speaker (incorrect)"]
+
+    runs = np.zeros((len(speakers), num_runs, num_productions + 1))
+    runs_incorrect = np.zeros((len(speakers), num_runs, num_productions + 1))
+
+    for i in range(num_runs):
         for j in range(len(speakers)):
-            post_list = simulation(hypotheses[speakers[j]], 300, priors, speakers[j], contexts)
-            runs[j][i] = post_list
+            post_list = simulation(hypotheses[speakers[j]], num_productions, priors, speakers[j], contexts)
+            runs[j][i] = post_list[speakers[j]]
+            runs_incorrect[j][i] = post_list[not_speakers[j]]
+
             with open(filename + '_' + str(args.p) + '_runs' + str(j+1) +'.pickle', 'wb') as f:
                 pickle.dump(runs[j][i], f)
-    data = np.array(runs)
-    with open(filename + '_' + str(args.p) + '_output.pickle', 'wb') as f:
-        pickle.dump(data, f)
 
-    plot_graph(filename, filename + " plot", data)
+    data = np.array(runs)
+    data_incorrect = np.array(runs_incorrect)
+    with open(filename + str(args.p) + '_output.pickle', 'wb') as f:
+        pickle.dump(data, f)
+    with open(filename + str(args.p) + 'incorrect_output.pickle', 'wb') as f:
+        pickle.dump(data_incorrect, f)
+
+    # Plot the graph for the correct pragmatic level hypothesis and the incorrect one
+    plot_graph(filename, plotnames[0], data)
+    plot_graph(filename + '_incorrect', plotnames[1], data_incorrect)
 
 
 if __name__ == "__main__":  
@@ -202,6 +221,8 @@ if __name__ == "__main__":
     signals = np.array(['a', 'b', 'c'])
     p_learner = 1
     alpha = 3.0
+    num_productions = 300
+    num_runs = 10
 
     hypotheses, priors = hypotheses.generate_hypotheses(perspectives, p_learner, "egocentric", pragmatic_levels)
     main()
