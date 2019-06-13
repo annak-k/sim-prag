@@ -1,18 +1,15 @@
 import random
 import numpy as np
-
 from math import log, log1p, exp
 from scipy.special import logsumexp, softmax
-
 from copy import deepcopy
-
 from argparse import ArgumentParser
 import pickle
 
 import utilities
 
-""" generate list of language-perspective pairs and generate priors """
 def generate_hypotheses():
+    """ generate list of language-perspective pairs and generate priors """
     languages = utilities.generate_languages()
     hypotheses = []
     priors_unbiased = [log(1/len(perspectives)) + log(1/len(languages)) + log(1/len(pragmatic_levels)) for i in range(len(perspectives) * len(languages) * len(pragmatic_levels))]
@@ -26,37 +23,37 @@ def generate_hypotheses():
                 priors_egocentric.append(p_prior + log(1/len(languages)) + log(1/len(pragmatic_levels)))
     return [np.array(hypotheses), np.array(priors_unbiased), np.array(priors_egocentric)]
 
-""" Pick a meaning with probability proportional to its designated probability """
 def sample(posterior):
+    """ Pick a meaning with probability proportional to its designated probability """
     return meanings[utilities.log_roulette_wheel(posterior)]
 
-""" Given speaker's perspective and the context,
+def calc_mental_state(perspective, context):
+    """ Given speaker's perspective and the context,
     compute a probability distribution over the referents
     of how likely the speaker is to speak about each referent
     p. 88 Equation 3.1 """
-def calc_mental_state(perspective, context):
     distribution = np.zeros(len(context))
     for o in range(len(context)):
         distribution[o] = log(1 - abs(perspective - context[o]))
     return utilities.normalize_logprobs(distribution)
 
-""" The perspective-taking listener uses Bayes rule to compute the
+def list1_lit_spkr(signal, meaning, language, ref_distribution):
+    """ The perspective-taking listener uses Bayes rule to compute the
     probability of a certain referent being intended by the speaker given the 
     produced signal, a language, and the listener's model of the speaker's 
     distribution over referents given their perspective """
-def list1_lit_spkr(signal, meaning, language, ref_distribution):
     # get the list of signals which can be used for the given meaning
     signals_for_r = [signals[s] for s in range(len(meanings)) if language[meaning][s] == '1']
     num_signals_for_r = len(signals_for_r)
     # compute the product of the probability that the speaker chooses referent r and that signal s is produced 
     if signal in signals_for_r:
-        if num_signals_for_r == num_signals:
+        if num_signals_for_r == len(signals):
             in_language = log(1 / num_signals_for_r)
         else:
             in_language = log((1 - noise) / num_signals_for_r)
         return ref_distribution[meaning] + in_language
     else:
-        out_of_language = log(noise / (num_signals - num_signals_for_r))
+        out_of_language = log(noise / (len(signals) - num_signals_for_r))
         return ref_distribution[meaning] + out_of_language
 
 def list1_perception_matrix(language, ref_distribution):
@@ -68,8 +65,8 @@ def list1_perception_matrix(language, ref_distribution):
         mat[s] = utilities.normalize_logprobs(row)
     return mat
 
-""" The level-2 pragmatic listener """
 def list2_spkr1(signal, meaning, language, ref_distribution):
+    """ The level-2 pragmatic listener """
     # get the list of signals which can be used for the given meaning
     s_index = signals.index(signal)
 
@@ -83,10 +80,10 @@ def list2_spkr1(signal, meaning, language, ref_distribution):
 
     return ref_distribution[meaning] + noisy_speaker_probs[s_index]
 
-""" Update the posterior probabilities the learner has assigned to
+def update_posterior(posterior, signal, context):
+    """ Update the posterior probabilities the learner has assigned to
     each lexicon/perspective pair based on the observed signal
     and context """
-def update_posterior(posterior, signal, context):
     new_posterior = np.zeros(len(posterior))
     for i in range(len(posterior)): # for each hypothesis
         language = hypotheses[i][0]
@@ -106,10 +103,10 @@ def update_posterior(posterior, signal, context):
         new_posterior[i] = posterior[i] + logsumexp(marginalize)
     return utilities.normalize_logprobs(new_posterior)
 
-""" The level-1 pragmatic speaker computes the probability of producing each signal
+def spkr1_production_probs(meaning, language, mental_state):
+    """ The level-1 pragmatic speaker computes the probability of producing each signal
     given the intended meaning, their language, and their mental state
     (a distrubtion over meanings given their perspective and the context) """
-def spkr1_production_probs(meaning, language, mental_state):
     # compute the utility of each signal as the negative surprisal of the intended
     # referent given the signal, for the listener
     signal_utility = np.array([alpha*list1_perception_matrix(language, mental_state)[s][meaning] for s in range(len(signals))])
@@ -117,8 +114,8 @@ def spkr1_production_probs(meaning, language, mental_state):
     # use softmax to get distribution over signals
     return np.array([log(p) for p in softmax(signal_utility)])
 
-""" Speaker produces a signal """
 def produce(system, context):
+    """ Speaker produces a signal """
     language = system[0]
     perspective = system[1]
     pragmatic_lvl = system[2]
@@ -217,7 +214,6 @@ if __name__ == "__main__":
     noise = 0.05
     perspectives = [0, 1]
     pragmatic_levels = [0, 1]
-    num_signals = 3
     meanings = [0, 1, 2]
     signals = ['a', 'b', 'c']
     p_learner = 1
