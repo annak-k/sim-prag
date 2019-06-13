@@ -9,9 +9,11 @@ import pickle
 import utilities
 import hypotheses
 
+
 def sample(posterior):
-    """ Pick a meaning with probability proportional to its designated probability """
-    return meanings[utilities.log_roulette_wheel(posterior)]
+    """ Pick an index in a list, with probability proportional to its designated probability """
+    return np.random.choice(np.arange(len(posterior)), p=np.exp(posterior))
+
 
 def calc_mental_state(perspective, context):
     """ Given speaker's perspective and the context,
@@ -22,6 +24,7 @@ def calc_mental_state(perspective, context):
     for o in range(len(context)):
         distribution[o] = log(1 - abs(perspective - context[o]))
     return utilities.normalize_logprobs(distribution)
+
 
 def list1_lit_spkr(signal, meaning, language, ref_distribution):
     """ The perspective-taking listener uses Bayes rule to compute the
@@ -42,6 +45,7 @@ def list1_lit_spkr(signal, meaning, language, ref_distribution):
         out_of_language = log(noise / (len(signals) - num_signals_for_r))
         return ref_distribution[meaning] + out_of_language
 
+
 def list1_perception_matrix(language, ref_distribution):
     mat = np.zeros((len(signals), len(meanings)))
     for s in range(len(signals)):
@@ -50,6 +54,7 @@ def list1_perception_matrix(language, ref_distribution):
             row[m] = list1_lit_spkr(signals[s], m, language, ref_distribution)
         mat[s] = utilities.normalize_logprobs(row)
     return mat
+
 
 def list2_spkr1(signal, meaning, language, ref_distribution):
     """ The level-2 pragmatic listener """
@@ -65,6 +70,7 @@ def list2_spkr1(signal, meaning, language, ref_distribution):
         noisy_speaker_probs[s] = logsumexp([noisy_speaker_probs[s], (log(noise) + logsumexp(other_signals)) - log(len(signals) - 1)])
 
     return ref_distribution[meaning] + noisy_speaker_probs[s_index]
+
 
 def update_posterior(posterior, signal, context):
     """ Update the posterior probabilities the learner has assigned to
@@ -89,6 +95,7 @@ def update_posterior(posterior, signal, context):
         new_posterior[i] = posterior[i] + logsumexp(marginalize)
     return utilities.normalize_logprobs(new_posterior)
 
+
 def spkr1_production_probs(meaning, language, mental_state):
     """ The level-1 pragmatic speaker computes the probability of producing each signal
     given the intended meaning, their language, and their mental state
@@ -98,7 +105,8 @@ def spkr1_production_probs(meaning, language, mental_state):
     signal_utility = np.array([alpha*list1_perception_matrix(language, mental_state)[s][meaning] for s in range(len(signals))])
     
     # use softmax to get distribution over signals
-    return np.array([log(p) for p in softmax(signal_utility)])
+    return np.log(softmax(signal_utility))
+
 
 def produce(system, context):
     """ Speaker produces a signal """
@@ -132,6 +140,7 @@ def produce(system, context):
             signal = random.choice(other_signals) 
     return [signal, context]
 
+
 def simulation(speaker, no_productions, priors, hypoth_index, contexts):
     posteriors = deepcopy(priors)
     posterior_list = [exp(posteriors[hypoth_index])]
@@ -141,6 +150,7 @@ def simulation(speaker, no_productions, priors, hypoth_index, contexts):
         posterior_list.append(exp(posteriors[hypoth_index]))
     return np.array(posterior_list)
 
+
 def main():
     parser = ArgumentParser()
     parser.add_argument("o", type=str, help="prefix for the output files")
@@ -148,16 +158,15 @@ def main():
     args = parser.parse_args()
     filename = args.o
 
-    # non-pragmatic speakers
     if args.p == 0:
-        s1 = 188 # lexicon where each meaning is associated with its corresponding signal
-        s2 = 182 # lexicon where the last meaning is associated with all signals
-        s3 = 171 # lexicon where only one signal is used for every meaning
+        # non-pragmatic speakers
+        speakers = [188, 182, 171] 
+        # lexicon where each meaning is associated with its corresponding signal
+        # lexicon where the last meaning is associated with all signals
+        # lexicon where only one signal is used for every meaning
     elif args.p == 1:
         # pragmatic speakers
-        s1 = 874 # lexicon where each meaning is associated with its corresponding signal
-        s2 = 868 # lexicon where the last meaning is associated with all signals
-        s3 = 857 # lexicon where only one signal is used for every meaning
+        speakers = [874, 868, 857]
 
     # Generate maximally informative contexts, which are all possible permutations of
     # [0.1, 0.2, 0.9] and [0.1, 0.8, 0.9] (12 in total)
@@ -172,28 +181,17 @@ def main():
             contexts.append([c[0], c[2], c[1]])
     contexts = np.array(contexts)
 
-    runs1 = []
-    runs2 = []
-    runs3 = []
-    for _ in range(10):
-        post_list1 = simulation(hypotheses[s1], 300, priors, s1, contexts)
-        runs1.append(post_list1)
-        with open(filename + '_' + str(args.p) + '_runs1.pickle', 'wb') as f:
-            pickle.dump(runs1, f)
-        post_list2 = simulation(hypotheses[s2], 300, priors, s2, contexts)
-        runs2.append(post_list2)
-        with open(filename + '_' + str(args.p) + '_runs2.pickle', 'wb') as f:
-            pickle.dump(runs2, f)
-        post_list3 = simulation(hypotheses[s3], 300, priors, s3, contexts)
-        runs3.append(post_list3)
-        with open(filename + '_' + str(args.p) + '_runs3.pickle', 'wb') as f:
-            pickle.dump(runs3, f)
-    runs1 = np.array(runs1)
-    runs2 = np.array(runs2)
-    runs3 = np.array(runs3)
-    data = np.array([runs1, runs2, runs3])
+    runs = np.zeros((3, 1, 31))
+    for i in range(1):
+        for j in range(len(speakers)):
+            post_list = simulation(hypotheses[speakers[j]], 30, priors, speakers[j], contexts)
+            runs[j][i] = post_list
+            with open(filename + '_' + str(args.p) + '_runs' + str(j+1) +'.pickle', 'wb') as f:
+                pickle.dump(runs[j][i], f)
+    data = np.array(runs)
     with open(filename + '_' + str(args.p) + '_output.pickle', 'wb') as f:
         pickle.dump(data, f)
+
 
 if __name__ == "__main__":  
     # Parameters

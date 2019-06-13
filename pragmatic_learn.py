@@ -152,15 +152,15 @@ def main():
     runs2 = []
     runs3 = []
     for _ in range(10):
-        post_list1 = simulation(speaker1, 300, priors_egocentric, 188, contexts)
+        post_list1 = simulation(speaker1, 300, priors, 188, contexts)
         runs1.append(post_list1)
         with open(filename + '_runs1.pickle', 'wb') as f:
             pickle.dump(runs1, f)
-        post_list2 = simulation(speaker2, 300, priors_egocentric, 182, contexts)
+        post_list2 = simulation(speaker2, 300, priors, 182, contexts)
         runs2.append(post_list2)
         with open(filename + '_runs2.pickle', 'wb') as f:
             pickle.dump(runs2, f)
-        post_list3 = simulation(speaker3, 300, priors_egocentric, 171, contexts)
+        post_list3 = simulation(speaker3, 300, priors, 171, contexts)
         runs3.append(post_list3)
         with open(filename + '_runs3.pickle', 'wb') as f:
             pickle.dump(runs3, f)
@@ -181,5 +181,5 @@ if __name__ == "__main__":
     p_learner = 1
     alpha = 3.0
 
-    lp_pairs, priors_unbiased, priors_egocentric = hypotheses.generate_hypotheses(perspectives, p_learner)
+    lp_pairs, priors = hypotheses.generate_hypotheses(perspectives, "egocentric", p_learner)
     main()
