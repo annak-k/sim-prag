@@ -10,20 +10,7 @@ from argparse import ArgumentParser
 import pickle
 
 import utilities
-
-""" generate list of language-perspective pairs and generate priors """
-def generate_hypotheses():
-    languages = utilities.generate_languages()
-    lp_pairs = []
-    priors_unbiased = [log(1/len(perspectives)) + log(1/len(languages)) for i in range(len(perspectives) * len(languages))]
-    priors_egocentric = []
-    for p in perspectives:
-        for l in languages:
-            lp_pairs.append([l, p])
-
-            p_prior = log(0.9) if p == p_learner else log(0.1)
-            priors_egocentric.append(p_prior + log(1/len(languages)))
-    return [np.array(lp_pairs), np.array(priors_unbiased), np.array(priors_egocentric)]
+import hypotheses
 
 """ Pick a meaning with probability proportional to its designated probability """
 def sample(posterior):
@@ -194,5 +181,5 @@ if __name__ == "__main__":
     p_learner = 1
     alpha = 3.0
 
-    lp_pairs, priors_unbiased, priors_egocentric = generate_hypotheses()
+    lp_pairs, priors_unbiased, priors_egocentric = hypotheses.generate_hypotheses(perspectives, p_learner)
     main()

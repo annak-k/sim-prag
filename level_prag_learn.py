@@ -7,21 +7,7 @@ from argparse import ArgumentParser
 import pickle
 
 import utilities
-
-def generate_hypotheses():
-    """ generate list of language-perspective pairs and generate priors """
-    languages = utilities.generate_languages()
-    hypotheses = []
-    priors_unbiased = [log(1/len(perspectives)) + log(1/len(languages)) + log(1/len(pragmatic_levels)) for i in range(len(perspectives) * len(languages) * len(pragmatic_levels))]
-    priors_egocentric = []
-    for pl in pragmatic_levels:
-        for p in perspectives:
-            for l in languages:
-                hypotheses.append([l, p, pl])
-
-                p_prior = log(0.9) if p == p_learner else log(0.1)
-                priors_egocentric.append(p_prior + log(1/len(languages)) + log(1/len(pragmatic_levels)))
-    return [np.array(hypotheses), np.array(priors_unbiased), np.array(priors_egocentric)]
+import hypotheses
 
 def sample(posterior):
     """ Pick a meaning with probability proportional to its designated probability """
@@ -190,15 +176,15 @@ def main():
     runs2 = []
     runs3 = []
     for _ in range(10):
-        post_list1 = simulation(hypotheses[s1], 300, priors_egocentric, s1, contexts)
+        post_list1 = simulation(hypotheses[s1], 300, priors, s1, contexts)
         runs1.append(post_list1)
         with open(filename + '_' + str(args.p) + '_runs1.pickle', 'wb') as f:
             pickle.dump(runs1, f)
-        post_list2 = simulation(hypotheses[s2], 300, priors_egocentric, s2, contexts)
+        post_list2 = simulation(hypotheses[s2], 300, priors, s2, contexts)
         runs2.append(post_list2)
         with open(filename + '_' + str(args.p) + '_runs2.pickle', 'wb') as f:
             pickle.dump(runs2, f)
-        post_list3 = simulation(hypotheses[s3], 300, priors_egocentric, s3, contexts)
+        post_list3 = simulation(hypotheses[s3], 300, priors, s3, contexts)
         runs3.append(post_list3)
         with open(filename + '_' + str(args.p) + '_runs3.pickle', 'wb') as f:
             pickle.dump(runs3, f)
@@ -219,5 +205,5 @@ if __name__ == "__main__":
     p_learner = 1
     alpha = 3.0
 
-    hypotheses, priors_unbiased, priors_egocentric = generate_hypotheses()
+    hypotheses, priors = hypotheses.generate_hypotheses(perspectives, p_learner, "egocentric", pragmatic_levels)
     main()
