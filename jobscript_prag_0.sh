@@ -18,5 +18,5 @@ module load anaconda/5.0.1
 
 # Run the program
 source activate sim-prag
-python sim-prag/level_prag_learn.py "/exports/eddie/scratch/s1682785/level_prag" 0
+python level_prag_learn.py "/exports/eddie/scratch/s1682785/level_prag" 0
 source deactivate

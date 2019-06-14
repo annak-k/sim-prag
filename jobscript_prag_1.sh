@@ -1,6 +1,6 @@
 #!/bin/sh
 # Grid Engine options (lines prefixed with #$)
-#$ -N p_lvl_0           
+#$ -N p_lvl_1           
 #$ -cwd                  
 #$ -l h_rt=10:00:00 
 #$ -l h_vmem=1G
@@ -18,5 +18,5 @@ module load anaconda/5.0.1
 
 # Run the program
 source activate sim-prag
-python sim-prag/level_prag_learn.py "/exports/eddie/scratch/s1682785/level_prag" 1
+python level_prag_learn.py "/exports/eddie/scratch/s1682785/level_prag" 1
 source deactivate

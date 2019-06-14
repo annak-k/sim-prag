@@ -208,8 +208,8 @@ def main():
         pickle.dump(data_incorrect, f)
 
     # Plot the graph for the correct pragmatic level hypothesis and the incorrect one
-    plot_graph("pragmatic_level" + args.p, plotnames[0], data)
-    plot_graph("pragmatic_level" + args.p + '_incorrect', plotnames[1], data_incorrect)
+    plot_graph("p_lvl" + str(args.p), plotnames[0], data)
+    plot_graph("p_lvl" + str(args.p) + '_incorrect', plotnames[1], data_incorrect)
 
 
 if __name__ == "__main__":  
