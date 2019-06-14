@@ -26,10 +26,10 @@ def calc_mental_state(perspective, context):
     return utilities.normalize_logprobs(distribution)
 
 
-def list1_lit_spkr(signal, meaning, language, ref_distribution):
-    """ The perspective-taking listener uses Bayes rule to compute the
+def learn1_lit_spkr(signal, meaning, language, ref_distribution):
+    """ The perspective-taking learner uses Bayes rule to compute the
     probability of a certain referent being intended by the speaker given the 
-    produced signal, a language, and the listener's model of the speaker's 
+    produced signal, a language, and the learner's model of the speaker's 
     distribution over referents given their perspective """
     # get the list of signals which can be used for the given meaning
     signals_for_r = signals[np.where(language[meaning] != '0')]
@@ -47,19 +47,19 @@ def list1_lit_spkr(signal, meaning, language, ref_distribution):
 
 
 def list1_perception_matrix(language, ref_distribution):
-    """ Turn the level-1 listener's model of the literal 
-        speaker into a perception matrix """
+    """ Turn the level-1 learner's model of the literal 
+        speaker into a listener's perception matrix """
     mat = np.zeros((len(signals), len(meanings)))
     for s in range(len(signals)):
         row = np.zeros(len(meanings))
         for m in meanings:
-            row[m] = list1_lit_spkr(signals[s], m, language, ref_distribution)
+            row[m] = learn1_lit_spkr(signals[s], m, language, ref_distribution)
         mat[s] = utilities.normalize_logprobs(row)
     return mat
 
 
-def list2_spkr1(signal, meaning, language, ref_distribution):
-    """ The level-2 pragmatic listener """
+def learn2_spkr1(signal, meaning, language, ref_distribution):
+    """ The level-2 pragmatic learner """
     s_index = np.where(signals == signal)
     # compute the probability of the speaker producing the signal, with noise
     speaker_probs = spkr1_production_probs(meaning, language, ref_distribution)
@@ -87,10 +87,10 @@ def update_posterior(posterior, signal, context):
         marginalize = np.zeros(len(meanings))
         if pragmatic_lvl == 0:
             for m in meanings:
-                marginalize[m] = list1_lit_spkr(signal, m, language, ref_distribution) # level-1 listener
+                marginalize[m] = learn1_lit_spkr(signal, m, language, ref_distribution) # level-1 learner
         elif pragmatic_lvl == 1:
             for m in meanings:
-                marginalize[m] = list2_spkr1(signal, m, language, ref_distribution) # level-2 listener
+                marginalize[m] = learn2_spkr1(signal, m, language, ref_distribution) # level-2 learner
 
         new_posterior[i] = posterior[i] + logsumexp(marginalize)
     return utilities.normalize_logprobs(new_posterior)
