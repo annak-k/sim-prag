@@ -47,6 +47,8 @@ def list1_lit_spkr(signal, meaning, language, ref_distribution):
 
 
 def list1_perception_matrix(language, ref_distribution):
+    """ Turn the level-1 listener's model of the literal 
+        speaker into a perception matrix """
     mat = np.zeros((len(signals), len(meanings)))
     for s in range(len(signals)):
         row = np.zeros(len(meanings))
@@ -95,9 +97,9 @@ def update_posterior(posterior, signal, context):
 
 
 def spkr1_production_probs(meaning, language, mental_state):
-    """ The level-1 pragmatic speaker computes the probability of producing each signal
-    given the intended meaning, their language, and their mental state
-    (a distrubtion over meanings given their perspective and the context) """
+    """ The level-1 pragmatic speaker computes the utility of producing each signal
+    based on the the probability that the level-1 listener will understand the intended meaning
+    of that signal """
     # compute the utility of each signal as the negative surprisal of the intended
     # referent given the signal, for the listener
     signal_utility = np.array([alpha*list1_perception_matrix(language, mental_state)[s][meaning] for s in range(len(signals))])
@@ -126,16 +128,16 @@ def produce(system, context):
             other_signals = deepcopy(signals)
             for s in signals_for_r:
                 other_signals = signals[np.where(signals != s)]
-            signal = random.choice(other_signals)
-    # choose the best signal given the pragmatically-derived probability distribution
+            signal = np.random.choice(other_signals)
     elif pragmatic_lvl == 1:
-        signal = signals[utilities.log_roulette_wheel(spkr1_production_probs(meaning, language, mental_state))]
+        # choose the best signal given the pragmatically-derived probability distribution
+        signal = signals[np.random.choice(np.arange(len(signals)), p=np.exp(spkr1_production_probs(meaning, language, mental_state)))]
         
         # with small probability (noise), pick a different signal
         if random.random() < noise:
             other_signals = deepcopy(signals)
-            other_signals.remove(signal)
-            signal = random.choice(other_signals) 
+            other_signals = signals[np.where(signals != signal)]
+            signal = np.random.choice(other_signals) 
     return [signal, context]
 
 
@@ -197,14 +199,14 @@ def main():
             runs[j][i] = post_list[speakers[j]]
             runs_incorrect[j][i] = post_list[not_speakers[j]]
 
-            with open(filename + '_' + str(args.p) + '_runs' + str(j+1) +'.pickle', 'wb') as f:
+            with open(filename + str(args.p) + '_spkr' + str(j+1) + '_run' + str(i) +'.pickle', 'wb') as f:
                 pickle.dump(runs[j][i], f)
 
     data = np.array(runs)
     data_incorrect = np.array(runs_incorrect)
-    with open(filename + str(args.p) + '_output.pickle', 'wb') as f:
+    with open(filename + str(args.p) + '_correct.pickle', 'wb') as f:
         pickle.dump(data, f)
-    with open(filename + str(args.p) + 'incorrect_output.pickle', 'wb') as f:
+    with open(filename + str(args.p) + '_incorrect.pickle', 'wb') as f:
         pickle.dump(data_incorrect, f)
 
     # Plot the graph for the correct pragmatic level hypothesis and the incorrect one
