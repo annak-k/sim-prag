@@ -141,24 +141,33 @@ def produce(system, context):
     return [signal, context]
 
 
-def simulation(speaker, no_productions, priors, hypoth_index, contexts):
+def simulation(speaker, no_productions, priors, contexts):
+    """ For no_productions times, have the specified speaker produce utterances
+        and have the learner learn the probability that each of their 
+        lexicon/perspective/pragmatic level hypotheses is the one that actually
+        corresponds to the speaker's system """
     posteriors = deepcopy(priors)
-    # posterior_list = [exp(posteriors[hypoth_index])]
     posterior_list = [np.exp(posteriors)]
     for i in range(no_productions):
         d = produce(speaker, contexts[i])
         posteriors = update_posterior(posteriors, d[0], d[1])
-        # posterior_list.append(exp(posteriors[hypoth_index]))
         posterior_list.append(np.exp(posteriors))
     return np.swapaxes(np.array(posterior_list), 0, 1)
+
+def listener_choose_system(probs, method):
+    if method == "map":
+        return np.argmax(probs)
+    else:
+        return np.random.choice(np.arange(len(probs)), p=probs)
 
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument("o", type=str, help="prefix for the output files")
-    parser.add_argument("p", type=int, help="use pragmatic speakers", default="0")
+    parser.add_argument("output", type=str, help="prefix for the output files")
+    parser.add_argument("p_lvl", type=int, help="use pragmatic speakers", default="0")
+    parser.add_argument("--spkr", type=int, nargs="?", help="which speaker to produce utterances")
     args = parser.parse_args()
-    filename = args.o
+    filename = args.output
 
     # lexicon where each meaning is associated with its corresponding signal
     # lexicon where the last meaning is associated with all signals
@@ -181,37 +190,68 @@ def main():
             contexts.append([c[0], c[2], c[1]])
     contexts = np.array(contexts)
 
-    if args.p == 0:
-        speakers = literal_speakers
-        not_speakers = prag_speakers
-        plotnames = ["Learning the literal speaker (correct)", "Learning the pragmatic speaker (incorrect)"]
-    elif args.p == 1:
-        speakers = prag_speakers
-        not_speakers = literal_speakers
-        plotnames = ["Learning the pragmatic speaker (correct)", "Learning the literal speaker (incorrect)"]
+    if args.spkr == None:
+        if args.p_lvl == 0:
+            speakers = literal_speakers
+            not_speakers = prag_speakers
+            plotnames = ["Learning the literal speaker (correct)", "Learning the pragmatic speaker (incorrect)"]
+        elif args.p_lvl == 1:
+            speakers = prag_speakers
+            not_speakers = literal_speakers
+            plotnames = ["Learning the pragmatic speaker (correct)", "Learning the literal speaker (incorrect)"]
+    else:
+        speaker = args.spkr
 
-    runs = np.zeros((len(speakers), num_runs, num_productions + 1))
-    runs_incorrect = np.zeros((len(speakers), num_runs, num_productions + 1))
+    if args.spkr == None:
+        """ If no speaker specified, run the desired number of simulations on three, then save the
+            posterior assigned to the correct hypothesis (and incorrect) at each time,
+            then output a plot showing the progression of posteriors """
+        runs = np.zeros((len(speakers), num_runs, num_productions + 1))
+        runs_incorrect = np.zeros((len(speakers), num_runs, num_productions + 1))
+        for i in range(num_runs):
+            for j in range(len(speakers)):
+                post_list = simulation(hypotheses[speakers[j]], num_productions, priors, contexts)
+                # save the probability that the learner assigned to the correct hypothesis
+                runs[j][i] = post_list[speakers[j]]
+                runs_incorrect[j][i] = post_list[not_speakers[j]]
 
-    for i in range(num_runs):
-        for j in range(len(speakers)):
-            post_list = simulation(hypotheses[speakers[j]], num_productions, priors, speakers[j], contexts)
-            runs[j][i] = post_list[speakers[j]]
-            runs_incorrect[j][i] = post_list[not_speakers[j]]
+                with open(filename + str(args.p_lvl) + '_spkr' + str(j+1) + '_run' + str(i) +'.pickle', 'wb') as f:
+                    pickle.dump(runs[j][i], f)
+        
+        data = np.array(runs)
+        data_incorrect = np.array(runs_incorrect)
+        with open(filename + str(args.p_lvl) + '_correct.pickle', 'wb') as f:
+            pickle.dump(data, f)
+        with open(filename + str(args.p_lvl) + '_incorrect.pickle', 'wb') as f:
+            pickle.dump(data_incorrect, f)
 
-            with open(filename + str(args.p) + '_spkr' + str(j+1) + '_run' + str(i) +'.pickle', 'wb') as f:
-                pickle.dump(runs[j][i], f)
+        # Plot the graph for the correct pragmatic level hypothesis and the incorrect one
+        plot_graph("p_lvl" + str(args.p_lvl), plotnames[0], data)
+        plot_graph("p_lvl" + str(args.p_lvl) + '_incorrect', plotnames[1], data_incorrect)
 
-    data = np.array(runs)
-    data_incorrect = np.array(runs_incorrect)
-    with open(filename + str(args.p) + '_correct.pickle', 'wb') as f:
-        pickle.dump(data, f)
-    with open(filename + str(args.p) + '_incorrect.pickle', 'wb') as f:
-        pickle.dump(data_incorrect, f)
-
-    # Plot the graph for the correct pragmatic level hypothesis and the incorrect one
-    plot_graph("p_lvl" + str(args.p), plotnames[0], data)
-    plot_graph("p_lvl" + str(args.p) + '_incorrect', plotnames[1], data_incorrect)
+    else:
+        """ If speaker specified, do desired number of simulations for the given speaker.
+            At the end of each run, the learner picks the system they will end up with.
+            Determine the probability that the speaker will end up with one of the six
+            systems we are interested in """
+        output_systems = {188: 0, 182: 0, 171: 0, 874: 0, 868: 0, 857: 0, 'other': 0}
+        for i in range(num_runs):
+            post_list = simulation(hypotheses[speaker], num_productions, priors, contexts)
+            # pick the system the listener ends up with, based on the last posterior
+            list_system = listener_choose_system(post_list[len(post_list) - 1], "map")
+            if list_system in [188, 182, 171, 874, 868, 857]:
+                output_systems[list_system] += 1
+            else:
+                output_systems['other'] += 1
+        # compute the probability
+        total = 0
+        output_probs = {188: 0, 182: 0, 171: 0, 874: 0, 868: 0, 857: 0, 'other': 0}
+        for _, v in output_systems.items():
+            total += v
+        for s, v in output_systems.items():
+            output_probs[s] = v/total
+        print("Input system: " + str(speaker))
+        print("Output system probabilities: " + str(output_probs))
 
 
 if __name__ == "__main__":  
