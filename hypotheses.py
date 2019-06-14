@@ -19,31 +19,66 @@ def generate_languages():
                     [string[6],string[7],string[8]]])
     return np.array(languages)
 
+# def generate_hypotheses(perspectives, p_learner, bias="unbiased", pragmatic_levels=None):
+#     """ Generate list of language-perspective hypotheses or 
+#         language-perspective-pragmatic-level hypotheses and generate their priors """
+#     languages = generate_languages()
+#     hypotheses = []
+#     priors = []
+#     if pragmatic_levels != None:
+#         for pl in pragmatic_levels:
+#             for p in perspectives:
+#                 for l in languages:
+#                     hypotheses.append([l, p, pl])
+                    
+#                     if bias == "unbiased":
+#                         p_prior = log(1/len(perspectives))
+#                     elif bias == "egocentric":
+#                         p_prior = log(0.9) if p == p_learner else log(0.1)
+#                     priors.append(p_prior + log(1/len(languages)) + log(1/len(pragmatic_levels)))
+#     else:
+#         for p in perspectives:
+#             for l in languages:
+#                 hypotheses.append([l, p])
+
+#                 if bias == "unbiased":
+#                     p_prior = log(1/len(perspectives))
+#                 elif bias == "egocentric":
+#                     p_prior = log(0.9) if p == p_learner else log(0.1)
+#                 priors.append(p_prior + log(1/len(languages)))
+#     return [np.array(hypotheses), np.array(priors)]
+
 def generate_hypotheses(perspectives, p_learner, bias="unbiased", pragmatic_levels=None):
     """ Generate list of language-perspective hypotheses or 
         language-perspective-pragmatic-level hypotheses and generate their priors """
     languages = generate_languages()
-    hypotheses = []
-    priors = []
     if pragmatic_levels != None:
-        for pl in pragmatic_levels:
-            for p in perspectives:
-                for l in languages:
-                    hypotheses.append([l, p, pl])
+        hypotheses = np.zeros((len(pragmatic_levels) * len(perspectives) * len(languages), 3)).astype(int)
+        priors = np.zeros(len(pragmatic_levels) * len(perspectives) * len(languages))
+        count = 0
+        for pl in range(len(pragmatic_levels)):
+            for p in range(len(perspectives)):
+                for l in range(len(languages)):
+                    hypotheses[count] = [l, p, pl]
                     
                     if bias == "unbiased":
                         p_prior = log(1/len(perspectives))
                     elif bias == "egocentric":
                         p_prior = log(0.9) if p == p_learner else log(0.1)
-                    priors.append(p_prior + log(1/len(languages)) + log(1/len(pragmatic_levels)))
+                    priors[count] = p_prior + log(1/len(languages)) + log(1/len(pragmatic_levels))
+                    count += 1
     else:
-        for p in perspectives:
-            for l in languages:
-                hypotheses.append([l, p])
+        hypotheses = np.zeros((len(perspectives) * len(languages), 2)).astype(int)
+        priors = np.zeros(len(perspectives) * len(languages))
+        count = 0
+        for p in range(len(perspectives)):
+            for l in range(len(languages)):
+                hypotheses[count] = [l, p]
 
                 if bias == "unbiased":
                     p_prior = log(1/len(perspectives))
                 elif bias == "egocentric":
                     p_prior = log(0.9) if p == p_learner else log(0.1)
-                priors.append(p_prior + log(1/len(languages)))
-    return [np.array(hypotheses), np.array(priors)]
+                priors[count] = p_prior + log(1/len(languages))
+                count += 1
+    return hypotheses, priors, languages

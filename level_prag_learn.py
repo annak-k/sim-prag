@@ -78,9 +78,9 @@ def update_posterior(posterior, signal, context):
     and context """
     new_posterior = np.zeros(len(posterior))
     for i in range(len(posterior)): # for each hypothesis
-        language = hypotheses[i][0]
-        perspective = hypotheses[i][1]
-        pragmatic_lvl = hypotheses[i][2]
+        language = languages[hypotheses[i][0]]
+        perspective = perspectives[hypotheses[i][1]]
+        pragmatic_lvl = pragmatic_levels[hypotheses[i][2]]
 
         ref_distribution = calc_mental_state(perspective, context)
 
@@ -110,9 +110,9 @@ def spkr1_production_probs(meaning, language, mental_state):
 
 def produce(system, context):
     """ Speaker produces a signal """
-    language = system[0]
-    perspective = system[1]
-    pragmatic_lvl = system[2]
+    language = languages[system[0]]
+    perspective = perspectives[system[1]]
+    pragmatic_lvl = pragmatic_levels[system[2]]
     mental_state = calc_mental_state(perspective, context)
     meaning = sample(mental_state)
     
@@ -154,11 +154,12 @@ def simulation(speaker, no_productions, priors, contexts):
         posterior_list.append(np.exp(posteriors))
     return np.swapaxes(np.array(posterior_list), 0, 1)
 
+
 def listener_choose_system(probs, method):
     if method == "map":
-        return np.argmax(probs)
+        return hypotheses[np.argmax(probs)]
     else:
-        return np.random.choice(np.arange(len(probs)), p=probs)
+        return hypotheses[np.random.choice(np.arange(len(probs)), p=probs)]
 
 
 def main():
@@ -239,24 +240,22 @@ def main():
             At the end of each run, the learner picks the system they will end up with.
             Determine the probability that the speaker will end up with one of the six
             systems we are interested in """
-        output_systems = {188: 0, 182: 0, 171: 0, 874: 0, 868: 0, 857: 0, 'other': 0}
+        chosen_systems = {}
         for i in range(num_runs):
             post_list = simulation(hypotheses[speaker], num_productions, priors, contexts)
             # pick the system the listener ends up with, based on the last posterior
-            list_system = listener_choose_system(post_list[len(post_list) - 1], "map")
-            if list_system in [188, 182, 171, 874, 868, 857]:
-                output_systems[list_system] += 1
+            listener_system = str(listener_choose_system(post_list[len(post_list) - 1], "map"))
+            # count how many times the listener chose the system they chose
+            if listener_system in list(chosen_systems):
+                chosen_systems[listener_system] += 1
             else:
-                output_systems['other'] += 1
-        # compute the probability
-        total = 0
-        output_probs = {188: 0, 182: 0, 171: 0, 874: 0, 868: 0, 857: 0, 'other': 0}
-        for _, v in output_systems.items():
-            total += v
-        for s, v in output_systems.items():
-            output_probs[s] = v/total
-        print("Input system: " + str(speaker))
-        print("Output system probabilities: " + str(output_probs))
+                chosen_systems[listener_system] = 1
+        # compute the probability of the listener choosing each system
+        output_probs = deepcopy(chosen_systems)
+        for s, v in chosen_systems.items():
+            output_probs[s] = v/num_runs
+
+        print(str(hypotheses[speaker]) + ": " + str(output_probs))
 
 
 if __name__ == "__main__":  
@@ -270,5 +269,5 @@ if __name__ == "__main__":
     alpha = 3.0
     num_productions = 300
 
-    hypotheses, priors = hypotheses.generate_hypotheses(perspectives, p_learner, "egocentric", pragmatic_levels)
+    hypotheses, priors, languages = hypotheses.generate_hypotheses(perspectives, p_learner, "egocentric", pragmatic_levels)
     main()
