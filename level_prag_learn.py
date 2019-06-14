@@ -166,8 +166,13 @@ def main():
     parser.add_argument("output", type=str, help="prefix for the output files")
     parser.add_argument("p_lvl", type=int, help="use pragmatic speakers", default="0")
     parser.add_argument("--spkr", type=int, nargs="?", help="which speaker to produce utterances")
+    parser.add_argument("--nruns", type=int, nargs="?", help="how many runs to do")
     args = parser.parse_args()
     filename = args.output
+    if args.nruns != None:
+        num_runs = args.nruns
+    else:
+        num_runs = 10
 
     # lexicon where each meaning is associated with its corresponding signal
     # lexicon where the last meaning is associated with all signals
@@ -264,7 +269,6 @@ if __name__ == "__main__":
     p_learner = 1
     alpha = 3.0
     num_productions = 300
-    num_runs = 10
 
     hypotheses, priors = hypotheses.generate_hypotheses(perspectives, p_learner, "egocentric", pragmatic_levels)
     main()
