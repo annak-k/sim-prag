@@ -152,7 +152,7 @@ def simulation(speaker, no_productions, priors, contexts):
         d = produce(speaker, contexts[i])
         posteriors = update_posterior(posteriors, d[0], d[1])
         posterior_list.append(np.exp(posteriors))
-    return np.swapaxes(np.array(posterior_list), 0, 1)
+    return np.array(posterior_list)
 
 
 def listener_choose_system(probs, method):
@@ -217,6 +217,7 @@ def main():
         for i in range(num_runs):
             for j in range(len(speakers)):
                 post_list = simulation(hypotheses[speakers[j]], num_productions, priors, contexts)
+                post_list = np.swapaxes(post_list, 0, 1)
                 # save the probability that the learner assigned to the correct hypothesis
                 runs[j][i] = post_list[speakers[j]]
                 runs_incorrect[j][i] = post_list[not_speakers[j]]
@@ -244,7 +245,7 @@ def main():
         for i in range(num_runs):
             post_list = simulation(hypotheses[speaker], num_productions, priors, contexts)
             # pick the system the listener ends up with, based on the last posterior
-            listener_system = str(listener_choose_system(post_list[len(post_list) - 1], "map"))
+            listener_system = str(listener_choose_system(post_list[num_runs], "map"))
             # count how many times the listener chose the system they chose
             if listener_system in list(chosen_systems):
                 chosen_systems[listener_system] += 1
