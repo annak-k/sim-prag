@@ -168,6 +168,7 @@ def main():
     parser.add_argument("p_lvl", type=int, help="use pragmatic speakers", default="0")
     parser.add_argument("--spkr", type=int, nargs="?", help="which speaker to produce utterances")
     parser.add_argument("--nruns", type=int, nargs="?", help="how many runs to do")
+    parser.add_argument("--old", action="store_true", help="Look for an existing set of posteriors instead of running the simulation")
     args = parser.parse_args()
     filename = args.output
     if args.nruns != None:
@@ -243,9 +244,17 @@ def main():
             systems we are interested in """
         chosen_systems = {}
         for i in range(num_runs):
-            post_list = simulation(hypotheses[speaker], num_productions, priors, contexts)
+            if args.old:
+                f = open(filename + str(args.p_lvl) + '_spkr' + str(args.spkr) + '_run' + str(i) +'.pickle', 'rb')
+                post_list = pickle.load(f)
+                f.close()
+            else:
+                post_list = simulation(hypotheses[speaker], num_productions, priors, contexts)
+                # save the final posteriors
+                with open(filename + str(args.p_lvl) + '_spkr' + str(args.spkr) + '_run' + str(i) +'.pickle', 'wb') as f:
+                    pickle.dump(post_list, f)
             # pick the system the listener ends up with, based on the last posterior
-            listener_system = str(listener_choose_system(post_list[num_runs], "map"))
+            listener_system = str(listener_choose_system(post_list[num_runs], "sample"))
             # count how many times the listener chose the system they chose
             if listener_system in list(chosen_systems):
                 chosen_systems[listener_system] += 1

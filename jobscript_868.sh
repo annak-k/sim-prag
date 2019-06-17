@@ -18,5 +18,5 @@ module load anaconda/5.0.1
 
 # Run the program
 source activate sim-prag
-python level_prag_learn.py "speaker_868_outcome" 1 --spkr 868 --nruns 30
+python level_prag_learn.py "/exports/eddie/scratch/s1682785/posts" 1 --spkr 868 --nruns 30
 source deactivate
