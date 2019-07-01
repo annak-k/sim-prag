@@ -10,10 +10,12 @@ from argparse import ArgumentParser
 import pickle
 
 import utilities
+import hypotheses
+from plot_graph import plot_graph
 
 """ generate list of language-perspective pairs and generate priors """
 def generate_hypotheses():
-    languages = utilities.generate_languages()
+    languages = hypotheses.generate_languages(3)
     lp_pairs = []
     priors_unbiased = [log(1/len(perspectives)) + log(1/len(languages)) for i in range(len(perspectives) * len(languages))]
     priors_egocentric = []
@@ -102,7 +104,7 @@ def main():
     speaker1 = lp_pairs[188] # lexicon where each meaning is associated with its corresponding signal
     speaker2 = lp_pairs[182] # lexicon where the last meaning is associated with all signals
     speaker3 = lp_pairs[171] # lexicon where only one signal is used for every meaning
-    contexts = np.array([[random.random(), random.random(), random.random()] for i in range(500)])
+    contexts = hypotheses.generate_contexts(3)
 
     runs1 = []
     runs2 = []
@@ -111,22 +113,23 @@ def main():
     for _ in range(10):
         post_list1 = simulation(speaker1, 300, priors_unbiased, 188, contexts)
         runs1.append(post_list1)
-        with open(filename + '_runs1.pickle', 'wb') as f:
-            pickle.dump(runs1, f)
+        # with open(filename + '_runs1.pickle', 'wb') as f:
+        #     pickle.dump(runs1, f)
         post_list2 = simulation(speaker2, 300, priors_unbiased, 182, contexts)
         runs2.append(post_list2)
-        with open(filename + '_runs2.pickle', 'wb') as f:
-            pickle.dump(runs2, f)
+        # with open(filename + '_runs2.pickle', 'wb') as f:
+        #     pickle.dump(runs2, f)
         post_list3 = simulation(speaker3, 300, priors_unbiased, 171, contexts)
         runs3.append(post_list3)
-        with open(filename + '_runs3.pickle', 'wb') as f:
-            pickle.dump(runs3, f)
+        # with open(filename + '_runs3.pickle', 'wb') as f:
+        #     pickle.dump(runs3, f)
     runs1 = np.array(runs1)
     runs2 = np.array(runs2)
     runs3 = np.array(runs3)
     data = np.array([runs1, runs2, runs3])
     with open(filename + '_output.pickle', 'wb') as f:
         pickle.dump(data, f)
+    plot_graph("plots/literal_3x3", "Literal speaker + learner: learning lexicon and perspective", data)
 
 if __name__ == "__main__":  
     # Parameters
