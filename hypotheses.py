@@ -79,9 +79,7 @@ def generate_contexts(size):
                 contexts.append([c[2], c[0], c[1]])
                 contexts.append([c[0], c[2], c[1]])
     elif size == 2:
-        for _ in range(150):
-            # contexts.append([0.2, 0.1])
-            # contexts.append([0.8, 0.9])
+        for _ in range(50):
             contexts.append([0.3, 0.1])
             contexts.append([0.4, 0.1])
             contexts.append([0.7, 0.9])
@@ -90,8 +88,19 @@ def generate_contexts(size):
             contexts.append([0.1, 0.4])
             contexts.append([0.9, 0.7])
             contexts.append([0.9, 0.6])
-            # contexts.append([0.5, 0.9])
-            # contexts.append([0.5, 0.1])
+            # # suggested contexts:
+            # # 0.1, 0.7
+            # # 0.3, 0.9
+            # # 0.1, 0.6
+            # # 0.4, 0.9
+            # contexts.append([0.1, 0.7])
+            # contexts.append([0.7, 0.1])
+            # contexts.append([0.3, 0.9])
+            # contexts.append([0.9, 0.3])
+            # contexts.append([0.1, 0.6])
+            # contexts.append([0.6, 0.1])
+            # contexts.append([0.4, 0.9])
+            # contexts.append([0.9, 0.4])
     else:
         print("Wrong context size")
         return None

@@ -245,7 +245,7 @@ def main():
                 with open(filename + '_spkr' + str(args.spkr) + '_run' + str(i) +'_2x2.pickle', 'wb') as f:
                     pickle.dump(post_list, f)
             # pick the system the listener ends up with, based on the last posterior
-            listener_system = str(listener_choose_system(post_list[120], "map"))
+            listener_system = str(listener_choose_system(post_list[60], "sample"))
             # count how many times the listener chose the system they chose
             if listener_system in list(chosen_systems):
                 chosen_systems[listener_system] += 1
@@ -256,7 +256,7 @@ def main():
         for s, v in chosen_systems.items():
             output_probs[s] = v/num_runs
 
-        with open('spkr' + str(args.spkr) + '_output_systems_2x2_map.pickle', 'wb') as f:
+        with open('spkr' + str(args.spkr) + '_output_systems_2x2_sample_60.pickle', 'wb') as f:
             pickle.dump({str(hypotheses[speaker]) : output_probs}, f)
         print(str(hypotheses[speaker]) + ": " + str(output_probs))
 
