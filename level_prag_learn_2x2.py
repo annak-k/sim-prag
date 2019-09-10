@@ -192,11 +192,11 @@ def main():
         if args.p_lvl == 0:
             speakers = literal_speakers
             not_speakers = prag_speakers
-            plotnames = ["Learning the literal speaker (correct)", "Learning the pragmatic speaker (incorrect)"]
+            plotnames = ["Learning the literal speaker (correct)", "Learning the literal speaker (incorrect)"]
         elif args.p_lvl == 1:
             speakers = prag_speakers
             not_speakers = literal_speakers
-            plotnames = ["Learning the pragmatic speaker (correct)", "Learning the literal speaker (incorrect)"]
+            plotnames = ["Learning the pragmatic speaker (correct)", "Learning the pragmatic speaker (incorrect)"]
     else:
         speaker = args.spkr
 

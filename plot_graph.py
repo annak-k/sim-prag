@@ -22,6 +22,7 @@ def plot_graph(name, title, results_list):
         plt.plot(average, color=colors[i], label=labels[i])
     plt.xlabel('utterances observed by the learner')
     plt.ylabel('learner\'s posterior')
+    plt.ylim(-0.05,1.05)
     plt.legend()
     plt.grid()
     plt.title(title)

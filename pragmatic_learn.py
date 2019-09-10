@@ -181,5 +181,5 @@ if __name__ == "__main__":
     p_learner = 1
     alpha = 3.0
 
-    lp_pairs, priors = hypotheses.generate_hypotheses(perspectives, "egocentric", p_learner)
+    lp_pairs, priors, languages = hypotheses.generate_hypotheses(perspectives, "egocentric", p_learner)
     main()

@@ -153,7 +153,7 @@ def main():
     data = np.array([runs1, runs2, runs3])
     with open(filename + '_output.pickle', 'wb') as f:
         pickle.dump(data, f)
-    plot_graph("plots/pragmatic_2x2", "Pragmatic speaker + learner: learning 2x2 lexicon and perspective", data)
+    plot_graph("plots/pragmatic_2x2_test", "Pragmatic speaker + learner: learning 2x2 lexicon and perspective", data)
 
 if __name__ == "__main__":
     # Parameters

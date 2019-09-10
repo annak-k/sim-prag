@@ -105,6 +105,7 @@ def main():
     speaker2 = lp_pairs[182] # lexicon where the last meaning is associated with all signals
     speaker3 = lp_pairs[171] # lexicon where only one signal is used for every meaning
     contexts = hypotheses.generate_contexts(3)
+    # contexts = np.array([[random.random(), random.random(), random.random()] for i in range(500)])
 
     runs1 = []
     runs2 = []
@@ -129,7 +130,7 @@ def main():
     data = np.array([runs1, runs2, runs3])
     with open(filename + '_output.pickle', 'wb') as f:
         pickle.dump(data, f)
-    plot_graph("plots/literal_3x3", "Literal speaker + learner: learning lexicon and perspective", data)
+    plot_graph("plots/literal_3x3_max_contexts_2", "Literal speaker + learner: learning 3x3 lexicon and perspective", data)
 
 if __name__ == "__main__":  
     # Parameters
